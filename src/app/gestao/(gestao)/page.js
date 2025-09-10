@@ -2,9 +2,9 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getSessions, closeSession, updateItemStatus } from "@/lib/api";
-import CancelItemModal from "@/components/gestao/CancelItemModal"; // 1. Importamos a nossa nova modal
+import CancelItemModal from "@/components/gestao/CancelItemModal";
 
 const StatusBadge = ({ item, onStatusChange }) => {
   const [isUpdating, setIsUpdating] = useState(false);
@@ -32,33 +32,55 @@ const StatusBadge = ({ item, onStatusChange }) => {
   );
 };
 
+// --- NOVA FUNÇÃO AUXILIAR PARA A ORDENAÇÃO ---
+const getSessionPriority = (sessao) => {
+  const todosOsItens = sessao.pedidos.flatMap(p => p.itens_pedido);
+  
+  // Prioridade 1: Se tiver qualquer item 'recebido'.
+  if (todosOsItens.some(item => item.status === 'recebido')) {
+    return 1;
+  }
+  // Prioridade 2: Se não tiver 'recebido', mas tiver 'em preparo'.
+  if (todosOsItens.some(item => item.status === 'em_preparo')) {
+    return 2;
+  }
+  // Prioridade 3: Todos os outros casos (nenhum item, ou todos entregues/cancelados).
+  return 3;
+};
+
+
 export default function GestaoDashboardPage() {
   const [sessoes, setSessoes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // 2. Novo estado para controlar qual item está a ser cancelado na modal
   const [itemToCancel, setItemToCancel] = useState(null);
+  const sessoesRef = useRef([]);
 
-  const carregarSessoes = async () => {
-    if(!isLoading) setIsLoading(true);
+  const carregarSessoes = async (isInitialLoad = false) => {
+    if (isInitialLoad) setIsLoading(true);
     const token = localStorage.getItem("authToken");
     if (!token) {
       setError("Token de autenticação não encontrado.");
       setIsLoading(false);
       return;
     }
+
     const sessoesDaApi = await getSessions(token);
     if (sessoesDaApi) {
-      setSessoes(sessoesDaApi);
+      if (JSON.stringify(sessoesDaApi) !== JSON.stringify(sessoesRef.current)) {
+        setSessoes(sessoesDaApi);
+        sessoesRef.current = sessoesDaApi;
+      }
     } else {
-      setError("Não foi possível carregar as sessões.");
+      if(isInitialLoad) setError("Não foi possível carregar as sessões.");
     }
-    setIsLoading(false);
+    if (isInitialLoad) setIsLoading(false);
   };
 
   useEffect(() => {
-    carregarSessoes();
+    carregarSessoes(true);
+    const intervalId = setInterval(() => carregarSessoes(false), 10000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleFecharConta = async (sessaoId) => {
@@ -66,7 +88,7 @@ export default function GestaoDashboardPage() {
     const result = await closeSession(token, sessaoId);
     if (result && !result.error) {
       alert("Conta fechada com sucesso!");
-      setSessoes(prevSessoes => prevSessoes.filter(s => s.id !== sessaoId));
+      await carregarSessoes(false);
     } else {
       alert("Erro ao fechar a conta. Tente novamente.");
     }
@@ -76,28 +98,29 @@ export default function GestaoDashboardPage() {
     const token = localStorage.getItem("authToken");
     const updatedItem = await updateItemStatus(token, itemId, newStatus);
     if (updatedItem && !updatedItem.error) {
-      await carregarSessoes();
+      await carregarSessoes(false);
     } else {
       alert("Erro ao atualizar o status do item.");
     }
   };
 
-  // 3. Nova função que é chamada quando o botão "Sim, cancelar" da modal é clicado
   const handleConfirmCancelItem = async () => {
     if (!itemToCancel) return;
     await handleUpdateItemStatus(itemToCancel.id, 'cancelado');
-    setItemToCancel(null); // Fecha a modal após a ação
+    setItemToCancel(null);
   };
 
   if (isLoading) {
     return <div>A carregar as sessões ativas...</div>;
   }
-
   if (error) {
     return <div className="text-red-500">{error}</div>;
   }
   
-  const sessoesAbertas = sessoes.filter(s => s.status === 'aberta');
+  // --- A LÓGICA DE ORDENAÇÃO É APLICADA AQUI ---
+  const sessoesAbertas = sessoes
+    .filter(s => s.status === 'aberta')
+    .sort((a, b) => getSessionPriority(a) - getSessionPriority(b));
 
   return (
     <div>
@@ -111,8 +134,11 @@ export default function GestaoDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {sessoesAbertas.map((sessao) => {
             const todosOsItens = sessao.pedidos.flatMap(p => p.itens_pedido);
+            const hasNewItems = todosOsItens.some(item => item.status === 'recebido');
             return (
-              <div key={sessao.id} className="bg-white rounded-lg shadow-md p-5 flex flex-col">
+              <div key={sessao.id} className={`bg-white rounded-lg shadow-md p-5 flex flex-col border-2 transition-colors ${
+                hasNewItems ? 'border-indigo-500' : 'border-transparent'
+              }`}>
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="text-xl font-bold text-gray-900">Mesa {sessao.mesa.numero}</h3>
                   <p className="text-xs text-gray-500">Aberta às: {new Date(sessao.data_abertura).toLocaleTimeString('pt-BR')}</p>
@@ -126,7 +152,6 @@ export default function GestaoDashboardPage() {
                       <div className="flex items-center space-x-2">
                         <StatusBadge item={item} onStatusChange={handleUpdateItemStatus} />
                         {item.status !== 'cancelado' && item.status !== 'entregue' && (
-                          // 4. O botão de cancelar agora abre a modal
                           <button onClick={() => setItemToCancel(item)} title="Cancelar item" className="text-red-400 hover:text-red-600">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
@@ -156,8 +181,6 @@ export default function GestaoDashboardPage() {
           })}
         </div>
       )}
-
-      {/* 5. Renderizamos a nossa nova modal de cancelamento */}
       <CancelItemModal 
         item={itemToCancel}
         onClose={() => setItemToCancel(null)}

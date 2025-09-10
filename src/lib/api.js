@@ -198,3 +198,33 @@ export async function updateItemStatus(token, itemId, newStatus) {
     return { error: error.message };
   }
 }
+
+
+export async function getGestaoCategorias(token) {
+  if (!token) return [];
+  try {
+    const response = await fetch(`${API_URL}/categorias/`, {
+      headers: { 'Authorization': `Token ${token}` },
+    });
+    if (!response.ok) throw new Error('Falha ao buscar categorias.');
+    return await response.json();
+  } catch (error) {
+    console.error("API Error:", error);
+    return [];
+  }
+}
+
+
+export async function getGestaoItensCardapio(token) {
+  if (!token) return [];
+  try {
+    const response = await fetch(`${API_URL}/itens-cardapio/`, {
+      headers: { 'Authorization': `Token ${token}` },
+    });
+    if (!response.ok) throw new Error('Falha ao buscar itens do cardápio.');
+    return await response.json();
+  } catch (error) {
+    console.error("API Error:", error);
+    return [];
+  }
+}
