@@ -89,10 +89,18 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
     setIsLoading(false);
   };
 
-  const handleSubmitOrder = async () => {
+    const handleSubmitOrder = async () => {
     setIsLoading(true);
     setError(null);
+
+    if (!sessao || !sessao.id) {
+      setError("Sessão inválida. Por favor, recarregue a página.");
+      setIsLoading(false);
+      return; 
+    }
+    
     const result = await submitOrder(sessao.id, cart);
+
     if (result && !result.error) {
       alert("Pedido enviado para a cozinha com sucesso!");
       setCart([]);
