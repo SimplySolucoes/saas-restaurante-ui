@@ -9,6 +9,7 @@ import {
   updateRestaurante,
   createMenuItem, updateMenuItem, deleteMenuItem,
   createCategory, updateCategory, deleteCategory,
+   toggleItemDisponibilidade 
 } from "@/lib/api";
 import ItemFormModal from "@/components/gestao/ItemFormModal";
 import CategoryFormModal from "@/components/gestao/CategoryFormModal";
