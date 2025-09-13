@@ -25,9 +25,6 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
         return;
       }
       
-      // --- A CORREÇÃO ESTÁ AQUI ---
-      // 1. Sempre que o 'mesaId' muda, voltamos ao estado de carregamento.
-      // Isto limpa os dados da sessão e do carrinho da mesa anterior.
       setIsLoading(true);
       setError(null);
       setSessao(null); 
@@ -40,7 +37,6 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
         setError("Não foi possível conectar ao servidor. Tente novamente.");
         console.error(error);
       } finally {
-        // 2. Apenas definimos isLoading para false no final de todo o processo.
         setIsLoading(false);
       }
     }
