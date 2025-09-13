@@ -461,3 +461,28 @@ export async function createSessionByNumber(slug, numeroMesa) {
   }
 }
 
+export async function toggleItemDisponibilidade(token, itemId, data) {
+  if (!token) return { error: "Token de autenticação em falta." };
+
+  try {
+    const response = await fetch(`${API_URL}/itens-cardapio/${itemId}/`, {
+      method: 'PATCH', 
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      const errorMessage = Object.values(errorData).flat().join(' ');
+      throw new Error(errorMessage || 'Falha ao atualizar o item.');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("API Error ao atualizar disponibilidade:", error);
+    return { error: error.message };
+  }
+}
+

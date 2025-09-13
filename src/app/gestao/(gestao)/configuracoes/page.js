@@ -355,21 +355,24 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const handleToggleDisponibilidade = async (item) => {
+   const handleToggleDisponibilidade = async (item) => {
     const token = localStorage.getItem("authToken");
+    if (!token) return;
+
     const originalItens = [...itens];
     const updatedItens = itens.map(i => 
       i.id === item.id ? { ...i, disponivel: !i.disponivel } : i
     );
+
     setItens(updatedItens);
 
-    const result = await updateMenuItem(token, item.id, { disponivel: !item.disponivel });
+    const result = await toggleItemDisponibilidade(token, item.id, { disponivel: !item.disponivel });
+
     if (result.error) {
       alert(`Erro ao atualizar o item: ${result.error}`);
       setItens(originalItens);
     }
   };
-
   const handleOpenCreateCategoryModal = () => { setCategoryToEdit(null); setCategoryModalOpen(true); };
   const handleOpenEditCategoryModal = (cat) => { setCategoryToEdit(cat); setCategoryModalOpen(true); };
   const handleCloseCategoryModal = () => { setCategoryModalOpen(false); setCategoryToEdit(null); };
