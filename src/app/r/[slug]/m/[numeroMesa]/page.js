@@ -1,33 +1,22 @@
-import { getRestauranteData, getCategorias, getItensCardapio } from "@/lib/api";
+import { getPublicCardapioData } from "@/lib/api";
 import MenuClientView from "@/components/menu/MenuClientView";
+import { notFound } from 'next/navigation';
 
-async function loadMenuData(restauranteId) {
-  const [restaurante, categorias, itens] = await Promise.all([
-    getRestauranteData(restauranteId),
-    getCategorias(restauranteId),
-    getItensCardapio(restauranteId),
-  ]);
-  return { restaurante, categorias, itens };
-}
+export default async function MenuPage({ params }) {
 
+  const { slug, numeroMesa } = params;
 
-export default async function MenuPage({ params: { restauranteId, mesaId } }) {
-  const { restaurante, categorias, itens } = await loadMenuData(restauranteId);
+  const data = await getPublicCardapioData(slug);
 
-  if (!restaurante) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-24">
-        <h1 className="text-4xl font-bold text-red-600">Restaurante não encontrado</h1>
-      </main>
-    );
+  if (!data) {
+    notFound();
   }
 
   return (
     <MenuClientView 
-      restaurante={restaurante}
-      categorias={categorias}
-      itens={itens}
-      mesaId={mesaId} 
+      initialData={data}
+      slug={slug}
+      numeroMesa={numeroMesa}
     />
   );
 }
