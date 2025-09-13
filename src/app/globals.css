@@ -18,6 +18,13 @@
     --foreground: #ededed;
   }
 }
+@layer base {
+  input,
+  select,
+  textarea {
+    @apply text-gray-900;
+  }
+}
 
 body {
   background: var(--background);

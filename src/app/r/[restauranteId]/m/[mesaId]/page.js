@@ -1,9 +1,6 @@
-// src/app/r/[restauranteId]/m/[mesaId]/page.js
-
 import { getRestauranteData, getCategorias, getItensCardapio } from "@/lib/api";
 import MenuClientView from "@/components/menu/MenuClientView";
 
-// A função de carregamento continua igual, recebendo o ID.
 async function loadMenuData(restauranteId) {
   const [restaurante, categorias, itens] = await Promise.all([
     getRestauranteData(restauranteId),
@@ -13,10 +10,8 @@ async function loadMenuData(restauranteId) {
   return { restaurante, categorias, itens };
 }
 
-// --- A MUDANÇA ESTÁ AQUI ---
-// Em vez de receber 'params', desestruturamos diretamente para obter 'restauranteId' e 'mesaId'.
+
 export default async function MenuPage({ params: { restauranteId, mesaId } }) {
-  // Agora usamos 'restauranteId' diretamente, que já foi extraído com segurança.
   const { restaurante, categorias, itens } = await loadMenuData(restauranteId);
 
   if (!restaurante) {
