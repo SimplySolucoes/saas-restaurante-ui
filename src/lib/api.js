@@ -229,7 +229,7 @@ export async function getGestaoItensCardapio(token) {
   }
 }
 
-export async function createMenuItem(token, formData) { // O segundo argumento agora é um objeto FormData
+export async function createMenuItem(token, formData) { 
   if (!token) return { error: "Token de autenticação em falta." };
 
   try {
@@ -428,3 +428,36 @@ export async function updateRestaurante(token, restauranteData) {
     return { error: error.message };
   }
 }
+
+export async function getPublicCardapioData(slug) {
+  try {
+    const response = await fetch(`${API_URL}/cardapio/${slug}/`);
+    if (!response.ok) {
+      if (response.status === 404) return null;
+      throw new Error('Falha ao buscar os dados do cardápio.');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("API Error (getPublicCardapioData):", error);
+    return null;
+  }
+}
+
+export async function createSessionByNumber(slug, numeroMesa) {
+  try {
+    const response = await fetch(`${API_URL}/sessoes/iniciar/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        restaurante_slug: slug, 
+        mesa_numero: numeroMesa 
+      }),
+    });
+    if (!response.ok) throw new Error('Falha ao criar sessão.');
+    return await response.json();
+  } catch (error) {
+    console.error("API Error (createSessionByNumber):", error);
+    return null;
+  }
+}
+

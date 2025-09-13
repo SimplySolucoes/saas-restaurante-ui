@@ -1,5 +1,3 @@
-// src/components/menu/MenuClientView.js
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -8,9 +6,14 @@ import MenuItemCard from "./MenuItemCard";
 import FloatingCartButton from "../cart/FloatingCartButton";
 import CartModal from "../cart/CartModal";
 import CategoryMenu from "./CategoryMenu";
-import { checkOpenSession, createSession, submitOrder } from "@/lib/api";
+// --- ALTERAÇÃO 1: Importamos a nova função de API e removemos a antiga 'checkOpenSession' ---
+import { createSessionByNumber, submitOrder } from "@/lib/api";
 
-export default function MenuClientView({ restaurante, categorias, itens, mesaId }) {
+// --- ALTERAÇÃO 2: As props da função mudaram ---
+export default function MenuClientView({ initialData, slug, numeroMesa }) {
+  // --- ALTERAÇÃO 3: Desestruturamos os dados que vêm da 'initialData' ---
+  const { restaurante, categorias, itens } = initialData;
+
   const [cart, setCart] = useState([]);
   const [isCartModalOpen, setCartModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -18,31 +21,18 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // --- ALTERAÇÃO 4: A lógica da sessão foi simplificada ---
+  // A página já não faz uma chamada à API ao carregar. Apenas verifica o localStorage.
   useEffect(() => {
-    async function fetchSession() {
-      if (!mesaId) {
-        setIsLoading(false);
-        return;
-      }
-      
-      setIsLoading(true);
-      setError(null);
-      setSessao(null); 
-      setCart([]); 
-
-      try {
-        const openSession = await checkOpenSession(mesaId);
-        setSessao(openSession);
-      } catch (error) {
-        setError("Não foi possível conectar ao servidor. Tente novamente.");
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
+    const storedSession = localStorage.getItem(`sessao_${slug}_${numeroMesa}`);
+    if (storedSession) {
+      setSessao(JSON.parse(storedSession));
     }
-    fetchSession();
-  }, [mesaId]);
+    // Como os dados já foram carregados no servidor, podemos parar o 'loading'
+    setIsLoading(false);
+  }, [slug, numeroMesa]);
 
+  // As suas funções de manipulação do carrinho permanecem as mesmas
   const handleAddItemToCart = (itemToAdd) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === itemToAdd.id);
@@ -55,9 +45,7 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
       }
     });
   };
-
   const handleIncreaseQuantity = handleAddItemToCart;
-
   const handleDecreaseQuantity = (itemToDecrease) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === itemToDecrease.id);
@@ -73,19 +61,21 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
     });
   };
 
+  // --- ALTERAÇÃO 5: A função de iniciar sessão agora usa o slug e o número da mesa ---
   const handleStartSession = async () => {
     setIsLoading(true);
     setError(null);
-    const newSession = await createSession(mesaId);
+    const newSession = await createSessionByNumber(slug, numeroMesa);
     if (newSession) {
       setSessao(newSession);
+      localStorage.setItem(`sessao_${slug}_${numeroMesa}`, JSON.stringify(newSession));
     } else {
       setError("Não foi possível iniciar uma nova sessão. Tente novamente.");
     }
     setIsLoading(false);
   };
 
-    const handleSubmitOrder = async () => {
+  const handleSubmitOrder = async () => {
     setIsLoading(true);
     setError(null);
 
@@ -108,7 +98,6 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
   };
 
   const totalItemsInCart = cart.reduce((total, item) => total + item.quantity, 0);
-
   const categoriasParaExibir = selectedCategory
     ? categorias.filter(cat => cat.nome === selectedCategory)
     : categorias;
@@ -125,7 +114,8 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
         <h1 className="text-4xl font-bold" style={{ color: restaurante.cor_principal }}>
           Bem-vindo a {restaurante.nome}!
         </h1>
-        <p className="mt-4 text-lg text-gray-600">Pronto para começar o seu pedido?</p>
+        {/* --- ALTERAÇÃO 6: Exibimos o número da mesa correto --- */}
+        <p className="mt-4 text-lg text-gray-600">Mesa {numeroMesa}</p>
         <button
           onClick={handleStartSession}
           className="mt-8 rounded-lg px-8 py-4 text-white font-bold shadow-lg transition-transform hover:scale-105"
@@ -154,7 +144,8 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
         )}
         <div className="text-left">
           <h1 className="text-3xl font-bold">{restaurante.nome}</h1>
-          <p>Mesa {mesaId}</p>
+          {/* --- ALTERAÇÃO 7: Exibimos o número da mesa correto --- */}
+          <p>Mesa {numeroMesa}</p>
         </div>
       </header>
       
@@ -209,3 +200,4 @@ export default function MenuClientView({ restaurante, categorias, itens, mesaId 
     </div>
   );
 }
+
