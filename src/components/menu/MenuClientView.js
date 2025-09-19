@@ -4,64 +4,104 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import MenuItemCard from "./MenuItemCard";
 import FloatingCartButton from "../cart/FloatingCartButton";
-import CartModal from "../cart/CartModal";
+import ResumoPedido from "../cart/ResumoPedido"; 
 import CategoryMenu from "./CategoryMenu";
-// --- ALTERAÇÃO 1: Importamos a nova função de API e removemos a antiga 'checkOpenSession' ---
 import { createSessionByNumber, submitOrder } from "@/lib/api";
+import Toast from "@/components/ui/Toast";
+import ModalSelecaoOpcoes from "@/components/ui/ModalSelecaoOpcoes"; 
 
-// --- ALTERAÇÃO 2: As props da função mudaram ---
 export default function MenuClientView({ initialData, slug, numeroMesa }) {
-  // --- ALTERAÇÃO 3: Desestruturamos os dados que vêm da 'initialData' ---
   const { restaurante, categorias, itens } = initialData;
 
-  const [cart, setCart] = useState([]);
-  const [isCartModalOpen, setCartModalOpen] = useState(false);
+  const [carrinho, setCarrinho] = useState([]);
+  const [isCarrinhoOpen, setIsCarrinhoOpen] = useState(false);
+  const [itemParaOpcoes, setItemParaOpcoes] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [sessao, setSessao] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toastState, setToastState] = useState({ show: false, message: '', type: 'success' });
 
-  // --- ALTERAÇÃO 4: A lógica da sessão foi simplificada ---
-  // A página já não faz uma chamada à API ao carregar. Apenas verifica o localStorage.
+  const cartKey = `carrinho_${slug}_${numeroMesa}`;
+  const sessionKey = `sessao_${slug}_${numeroMesa}`;
+
+
+   useEffect(() => {
+    if (!sessao) return;
+
+    const intervalId = setInterval(async () => {
+      const sessaoAtualizada = await getSessionStatus(sessao.id);
+
+      if (sessaoAtualizada.status === 'fechada') {
+        alert("Esta conta foi encerrada. Obrigado!");
+        
+        localStorage.removeItem(cartKey);
+        localStorage.removeItem(sessionKey);
+        window.location.reload(); 
+      }
+    }, 10000); 
+
+    return () => clearInterval(intervalId);
+
+  }, [sessao, cartKey, sessionKey]); 
+
   useEffect(() => {
+    const storedCart = localStorage.getItem(cartKey);
+    if (storedCart) {
+      setCarrinho(JSON.parse(storedCart));
+    }
     const storedSession = localStorage.getItem(`sessao_${slug}_${numeroMesa}`);
     if (storedSession) {
       setSessao(JSON.parse(storedSession));
     }
-    // Como os dados já foram carregados no servidor, podemos parar o 'loading'
     setIsLoading(false);
-  }, [slug, numeroMesa]);
+  }, [slug, numeroMesa, cartKey]);
 
-  // As suas funções de manipulação do carrinho permanecem as mesmas
-  const handleAddItemToCart = (itemToAdd) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === itemToAdd.id);
-      if (existingItem) {
-        return prevCart.map((item) =>
-          item.id === itemToAdd.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      } else {
-        return [...prevCart, { ...itemToAdd, quantity: 1 }];
-      }
+  useEffect(() => {
+    if (carrinho.length > 0) {
+      localStorage.setItem(cartKey, JSON.stringify(carrinho));
+    } else {
+      localStorage.removeItem(cartKey);
+    }
+  }, [carrinho, cartKey]);
+
+
+  const handleAdicionarAoCarrinho = (itemParaAdicionar) => {
+    const idOpcoes = (itemParaAdicionar.gruposSelecionados || []).flatMap(g => g.opcoes.map(o => o.id));
+    const idOpcoesString = idOpcoes.sort().toString();
+    
+    const itemExistenteIndex = carrinho.findIndex(item => {
+      const idOpcoesExistente = (item.gruposSelecionados || []).flatMap(g => g.opcoes.map(o => o.id));
+      const idOpcoesExistenteString = idOpcoesExistente.sort().toString();
+      return item.produtoId === itemParaAdicionar.produtoId && idOpcoesExistenteString === idOpcoesString;
+    });
+
+    if (itemExistenteIndex > -1) {
+      const novoCarrinho = [...carrinho];
+      novoCarrinho[itemExistenteIndex].quantidade += itemParaAdicionar.quantidade;
+      setCarrinho(novoCarrinho);
+    } else {
+      const novaLinha = { ...itemParaAdicionar, idLinhaCarrinho: Date.now() };
+      setCarrinho(prev => [...prev, novaLinha]);
+    }
+  };
+  
+  const handleRemoverItem = (itemParaRemover) => {
+    setCarrinho(prev => prev.filter(item => item.idLinhaCarrinho !== itemParaRemover.idLinhaCarrinho));
+  };
+  
+  const handleAlterarQuantidade = (itemParaAlterar, quantidade) => {
+    setCarrinho(prev => {
+      const novoCarrinho = prev.map(item => {
+        if (item.idLinhaCarrinho === itemParaAlterar.idLinhaCarrinho) {
+          return { ...item, quantidade: Math.max(0, item.quantidade + quantidade) };
+        }
+        return item;
+      });
+      return novoCarrinho.filter(item => item.quantidade > 0);
     });
   };
-  const handleIncreaseQuantity = handleAddItemToCart;
-  const handleDecreaseQuantity = (itemToDecrease) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === itemToDecrease.id);
-      if (existingItem && existingItem.quantity === 1) {
-        return prevCart.filter((item) => item.id !== itemToDecrease.id);
-      } else {
-        return prevCart.map((item) =>
-          item.id === itemToDecrease.id
-            ? { ...item, quantity: item.quantity - 1 }
-            : item
-        );
-      }
-    });
-  };
 
-  // --- ALTERAÇÃO 5: A função de iniciar sessão agora usa o slug e o número da mesa ---
   const handleStartSession = async () => {
     setIsLoading(true);
     setError(null);
@@ -78,49 +118,41 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const handleSubmitOrder = async () => {
     setIsLoading(true);
     setError(null);
-
-    if (!sessao || !sessao.id) {
+      if (!sessao || !sessao.id) {
       setError("Sessão inválida. Por favor, recarregue a página.");
+      setToastState({ show: true, message: 'Sessão inválida. Recarregue a página.', type: 'error' });
       setIsLoading(false);
       return; 
     }
     
-    const result = await submitOrder(sessao.id, cart);
+    const result = await submitOrder(sessao.id, carrinho);
 
     if (result && !result.error) {
-      alert("Pedido enviado para a cozinha com sucesso!");
-      setCart([]);
-      setCartModalOpen(false);
+      setToastState({ show: true, message: "Pedido enviado com sucesso!", type: 'success' });
+      setCarrinho([]);
+      setIsCarrinhoOpen(false);
+      localStorage.removeItem(cartKey);
     } else {
-      alert(`Erro ao enviar o pedido: ${result.error}`);
+      setToastState({ show: true, message: `Erro: ${result.error}`, type: 'error' });
     }
     setIsLoading(false);
   };
 
-  const totalItemsInCart = cart.reduce((total, item) => total + item.quantity, 0);
-  const categoriasParaExibir = selectedCategory
-    ? categorias.filter(cat => cat.nome === selectedCategory)
-    : categorias;
+  const totalItemsInCart = carrinho.reduce((total, item) => total + item.quantidade, 0);
+  const categoriasParaExibir = selectedCategory ? categorias.filter(cat => cat.nome === selectedCategory) : categorias;
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">A carregar...</div>;
   }
-  if (error) {
+if (error) {
     return <div className="flex h-screen items-center justify-center text-red-500">{error}</div>;
   }
   if (!sessao) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-gray-100 p-4">
-        <h1 className="text-4xl font-bold" style={{ color: restaurante.cor_principal }}>
-          Bem-vindo a {restaurante.nome}!
-        </h1>
-        {/* --- ALTERAÇÃO 6: Exibimos o número da mesa correto --- */}
+        <h1 className="text-4xl font-bold" style={{ color: restaurante.cor_principal }}>Bem-vindo a {restaurante.nome}!</h1>
         <p className="mt-4 text-lg text-gray-600">Mesa {numeroMesa}</p>
-        <button
-          onClick={handleStartSession}
-          className="mt-8 rounded-lg px-8 py-4 text-white font-bold shadow-lg transition-transform hover:scale-105"
-          style={{ backgroundColor: restaurante.cor_principal }}
-        >
+        <button onClick={handleStartSession} className="mt-8 rounded-lg px-8 py-4 text-white font-bold shadow-lg transition-transform hover:scale-105" style={{ backgroundColor: restaurante.cor_principal }}>
           Iniciar Novo Pedido
         </button>
       </div>
@@ -129,7 +161,7 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
 
   return (
     <div className="bg-gray-100 min-h-screen relative">
-      <header 
+     <header 
         className="p-4 flex items-center justify-center space-x-4 text-white shadow-lg sticky top-0 z-20" 
         style={{ backgroundColor: restaurante.cor_principal }}
       >
@@ -144,11 +176,9 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
         )}
         <div className="text-left">
           <h1 className="text-3xl font-bold">{restaurante.nome}</h1>
-          {/* --- ALTERAÇÃO 7: Exibimos o número da mesa correto --- */}
           <p>Mesa {numeroMesa}</p>
         </div>
       </header>
-      
       <nav className="sticky top-[104px] bg-white/80 backdrop-blur-sm shadow-sm z-10">
         <CategoryMenu 
           categorias={categorias}
@@ -161,43 +191,65 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       <main className="p-4 md:p-8 pb-24">
         {categoriasParaExibir.map((categoria) => (
           <section key={categoria.id} className="mb-12">
-            <h3 className="text-2xl font-bold border-b-2 pb-2 mb-6 text-gray-800" style={{ borderColor: restaurante.cor_principal }}>
-              {categoria.nome}
-            </h3>
+            <h3 className="text-2xl font-bold border-b-2 pb-2 mb-6 text-gray-800" style={{ borderColor: restaurante.cor_principal }}>{categoria.nome}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {itens
-                .filter((item) => item.categoria === categoria.nome)
-                .map((item) => (
+              {itens.filter((item) => item.categoria === categoria.nome).map((item) => (
                   <MenuItemCard 
                     key={item.id} 
                     item={item} 
                     corPrincipal={restaurante.cor_principal} 
-                    onAddItem={handleAddItemToCart} 
+                    onAddItem={(itemClicado) => {
+                      if (itemClicado.tem_opcoes) {
+                        setItemParaOpcoes(itemClicado);
+                      } else {
+                        handleAdicionarAoCarrinho({ produtoId: itemClicado.id, nome: itemClicado.nome, preco: itemClicado.preco, gruposSelecionados: [], quantidade: 1 });
+                      }
+                    }} 
                   />
-                ))}
+              ))}
             </div>
           </section>
         ))}
       </main>
 
-      <div onClick={() => setCartModalOpen(true)}>
+      <div onClick={() => setIsCarrinhoOpen(true)}>
         <FloatingCartButton 
           itemCount={totalItemsInCart} 
           corPrincipal={restaurante.cor_principal} 
         />
       </div>
 
-      {isCartModalOpen && (
-        <CartModal 
-          cartItems={cart}
+      {itemParaOpcoes && (
+        <ModalSelecaoOpcoes
+          item={itemParaOpcoes}
+          onCancel={() => setItemParaOpcoes(null)}
+          onConfirm={(dadosDoModal) => {
+            handleAdicionarAoCarrinho({ produtoId: itemParaOpcoes.id, nome: itemParaOpcoes.nome, preco: itemParaOpcoes.preco, ...dadosDoModal });
+            setItemParaOpcoes(null);
+          }}
           corPrincipal={restaurante.cor_principal}
-          onClose={() => setCartModalOpen(false)}
-          onSubmit={handleSubmitOrder}
-          onIncreaseQuantity={handleIncreaseQuantity}
-          onDecreaseQuantity={handleDecreaseQuantity}
         />
       )}
+
+      {isCarrinhoOpen && (
+        <ResumoPedido
+          itensDoCarrinho={carrinho}
+          corPrincipal={restaurante.cor_principal}
+          onFechar={() => setIsCarrinhoOpen(false)}
+          onConfirmar={handleSubmitOrder}
+          onAumentarQtde={(item) => handleAlterarQuantidade(item, 1)}
+          onDiminuirQtde={(item) => handleAlterarQuantidade(item, -1)}
+          onRemoverItem={handleRemoverItem}
+        />
+      )}
+      
+      <Toast 
+        message={toastState.message}
+        show={toastState.show}
+        onHide={() => setToastState({ show: false, message: '', type: 'success' })}
+        type={toastState.type}
+
+      />
     </div>
   );
 }
-
