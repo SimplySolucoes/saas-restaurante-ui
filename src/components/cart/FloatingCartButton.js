@@ -1,16 +1,18 @@
-// src/components/cart/FloatingCartButton.js
+"use client";
 
-// Este componente recebe o número de itens no carrinho e exibe-o.
-export default function FloatingCartButton({ itemCount, corPrincipal }) {
-  // Se não houver itens, não exibe nada.
+export default function FloatingCartButton({ 
+  itemCount, 
+  corPrincipal,
+  onClick // 1. Adicionamos 'onClick' para receber a função
+}) {
   if (itemCount === 0) {
     return null;
   }
 
   return (
-    // Botão flutuante fixo no canto inferior direito
     <button
-      className="fixed bottom-6 right-6 h-16 w-16 rounded-full text-white shadow-lg flex items-center justify-center transform transition-transform hover:scale-110"
+      onClick={onClick} // 2. Usamos a função recebida no evento de clique do botão
+      className="fixed bottom-6 right-6 h-16 w-16 rounded-full text-white shadow-lg flex items-center justify-center transform transition-transform hover:scale-110 z-30"
       style={{ backgroundColor: corPrincipal }}
     >
       {/* Ícone do Carrinho (SVG) */}

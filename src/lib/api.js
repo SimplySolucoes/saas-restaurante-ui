@@ -64,11 +64,18 @@ export async function createSession(mesaId) {
 }
 
 export async function submitOrder(sessaoId, cartItems) {
-  const itensFormatados = cartItems.map(item => ({
-    item_cardapio: item.id,
-    quantidade: item.quantity,
-    observacoes: item.observacoes || ''
-  }));
+  
+  const itensFormatados = cartItems.map(item => {
+    const idsDasOpcoes = (item.gruposSelecionados || [])
+      .flatMap(grupo => grupo.opcoes.map(opcao => opcao.id));
+
+    return {
+      item_cardapio: item.produtoId, 
+      quantidade: item.quantidade,
+      observacoes: item.observacoes || '',
+      opcoes_selecionadas: idsDasOpcoes, 
+    };
+  });
 
   const payload = {
     sessao: sessaoId,
@@ -84,7 +91,8 @@ export async function submitOrder(sessaoId, cartItems) {
     
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || 'Falha ao enviar o pedido.');
+      console.error("Erro de validação do backend:", errorData);
+      throw new Error(Object.values(errorData).flat().join(' ') || 'Falha ao enviar o pedido.');
     }
     
     return await response.json();
@@ -93,6 +101,7 @@ export async function submitOrder(sessaoId, cartItems) {
     return { error: error.message };
   }
 }
+
 
 export async function loginUser(credentials) {
   try {
@@ -379,17 +388,22 @@ export async function getMesas(token) {
   }
 }
 
-
 export async function getRestaurante(token) {
   if (!token) return null;
   try {
     const response = await fetch(`${API_URL}/restaurantes/meu/`, {
-      headers: { 'Authorization': `Token ${token}` },
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json',
+      },
     });
-    if (!response.ok) throw new Error('Falha ao buscar dados do restaurante.');
+    if (!response.ok) {
+      throw new Error(`Falha ao buscar dados do restaurante (Status: ${response.status})`);
+    }
     return await response.json();
   } catch (error) {
-    console.error("API Error ao buscar restaurante:", error);
+    console.error("API Error (getRestaurante):", error);
     return null;
   }
 }
@@ -485,4 +499,141 @@ export async function toggleItemDisponibilidade(token, itemId, data) {
     return { error: error.message };
   }
 }
+
+
+export async function getGruposOpcao(token, itemId) {
+  if (!token) return [];
+  try {
+    const response = await fetch(`${API_URL}/itens-cardapio/${itemId}/grupos-opcao/`, {
+      headers: { 'Authorization': `Token ${token}` },
+      cache: 'no-store', 
+    });
+    if (!response.ok) throw new Error('Falha ao buscar grupos de opção.');
+    return await response.json();
+  } catch (error) {
+    console.error("API Error (getGruposOpcao):", error);
+    return [];
+  }
+}
+
+
+export async function createGrupoOpcao(token, itemId, grupoData) {
+  if (!token) return { error: "Token em falta." };
+  try {
+    const response = await fetch(`${API_URL}/itens-cardapio/${itemId}/grupos-opcao/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(grupoData),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(Object.values(data).flat().join(' '));
+    return data;
+  } catch (error) {
+    return { error: error.message };
+  }
+}
+
+export async function updateGrupoOpcao(token, grupoId, grupoData) {
+  if (!token) return { error: "Token em falta." };
+  try {
+    const response = await fetch(`${API_URL}/grupos-opcao/${grupoId}/`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(grupoData),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(Object.values(data).flat().join(' '));
+    return data;
+  } catch (error) {
+    return { error: error.message };
+  }
+}
+
+export async function deleteGrupoOpcao(token, grupoId) {
+    if (!token) return { error: "Token em falta." };
+    try {
+        const response = await fetch(`${API_URL}/grupos-opcao/${grupoId}/`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Token ${token}` },
+        });
+        if (!response.ok) throw new Error('Falha ao apagar o grupo.');
+        return { success: true };
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
+
+export async function createItemOpcao(token, grupoId, itemData) {
+  if (!token) return { error: "Token em falta." };
+  try {
+    const response = await fetch(`${API_URL}/grupos-opcao/${grupoId}/itens-opcao/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(itemData),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(Object.values(data).flat().join(' '));
+    return data;
+  } catch (error) {
+    return { error: error.message };
+  }
+}
+
+export async function updateItemOpcao(token, itemId, itemData) {
+    if (!token) return { error: "Token em falta." };
+    try {
+        const response = await fetch(`${API_URL}/itens-opcao/${itemId}/`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Token ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(itemData),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(Object.values(data).flat().join(' '));
+        return data;
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
+export async function deleteItemOpcao(token, itemId) {
+    if (!token) return { error: "Token em falta." };
+    try {
+        const response = await fetch(`${API_URL}/itens-opcao/${itemId}/`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Token ${token}` },
+        });
+        if (!response.ok) throw new Error('Falha ao apagar o item de opção.');
+        return { success: true };
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
+export async function getSessionStatus(sessaoId) {
+  try {
+    const response = await fetch(`${API_URL}/sessoes/${sessaoId}/`);
+    if (!response.ok) {
+      if (response.status === 404) return { status: 'fechada' };
+      throw new Error('Falha ao buscar status da sessão.');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("API Error (getSessionStatus):", error);
+    return { error: error.message, status: 'fechada' };
+  }
+}
+
 
