@@ -457,21 +457,22 @@ export async function getPublicCardapioData(slug) {
   }
 }
 
-export async function createSessionByNumber(slug, numeroMesa) {
+export async function createSessionByNumber(slug, numeroMesa, segredo) {
   try {
     const response = await fetch(`${API_URL}/sessoes/iniciar/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         restaurante_slug: slug, 
-        mesa_numero: numeroMesa 
+        mesa_numero: numeroMesa,
+        segredo: segredo 
       }),
     });
-    if (!response.ok) throw new Error('Falha ao criar sessão.');
+    if (!response.ok) throw new Error('Falha ao criar sessão. Verifique o QR Code.');
     return await response.json();
   } catch (error) {
     console.error("API Error (createSessionByNumber):", error);
-    return null;
+    return { error: error.message };
   }
 }
 
@@ -633,6 +634,20 @@ export async function getSessionStatus(sessaoId) {
   } catch (error) {
     console.error("API Error (getSessionStatus):", error);
     return { error: error.message, status: 'fechada' };
+  }
+}
+
+export async function getUrlSeguraMesa(token, mesaId) {
+  if (!token) return { error: "Token em falta." };
+  try {
+    const response = await fetch(`${API_URL}/mesas/${mesaId}/url-segura/`, {
+      headers: { 'Authorization': `Token ${token}` },
+    });
+    if (!response.ok) throw new Error('Falha ao buscar URL segura.');
+    return await response.json(); 
+  } catch (error) {
+    console.error("API Error (getUrlSeguraMesa):", error);
+    return { error: error.message };
   }
 }
 
