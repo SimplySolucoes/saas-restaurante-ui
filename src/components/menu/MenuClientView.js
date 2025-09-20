@@ -102,15 +102,23 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     });
   };
 
-  const handleStartSession = async () => {
+ const handleStartSession = async () => {
     setIsLoading(true);
     setError(null);
-    const newSession = await createSessionByNumber(slug, numeroMesa);
-    if (newSession) {
+    
+    const segredo = sessionStorage.getItem(`segredo_mesa_${slug}_${numeroMesa}`);
+    if (!segredo) {
+      setError("autenticação falhou. Por favor, escaneie o QR Code novamente.");
+      setIsLoading(false);
+      return;
+    }
+
+    const newSession = await createSessionByNumber(slug, numeroMesa, segredo);
+    if (newSession && !newSession.error) {
       setSessao(newSession);
       localStorage.setItem(`sessao_${slug}_${numeroMesa}`, JSON.stringify(newSession));
     } else {
-      setError("Não foi possível iniciar uma nova sessão. Tente novamente.");
+      setError(newSession.error || "Não foi possível iniciar uma nova sessão.");
     }
     setIsLoading(false);
   };
