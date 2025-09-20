@@ -503,11 +503,15 @@ export async function toggleItemDisponibilidade(token, itemId, data) {
 
 
 export async function getGruposOpcao(token, itemId) {
-  if (!token) return [];
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Token ${token}`;
+  }
+
   try {
     const response = await fetch(`${API_URL}/itens-cardapio/${itemId}/grupos-opcao/`, {
-      headers: { 'Authorization': `Token ${token}` },
-      cache: 'no-store', 
+      headers: headers,
+      cache: 'no-store',
     });
     if (!response.ok) throw new Error('Falha ao buscar grupos de opção.');
     return await response.json();
@@ -516,7 +520,6 @@ export async function getGruposOpcao(token, itemId) {
     return [];
   }
 }
-
 
 export async function createGrupoOpcao(token, itemId, grupoData) {
   if (!token) return { error: "Token em falta." };
