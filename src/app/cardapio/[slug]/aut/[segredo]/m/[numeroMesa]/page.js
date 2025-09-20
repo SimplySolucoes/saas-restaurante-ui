@@ -19,7 +19,8 @@ export default function QrAuthPage({ params }) {
 
   return (
     <div className="flex h-screen w-full items-center justify-center bg-gray-100">
-      <p className="text-lg font-semibold">Autenticando mesa, por favor aguarde...</p>
+      <p className="text-lg font-semibold">Autenticando mesa, por favor aguarde....</p>
     </div>
   );
+
 }
