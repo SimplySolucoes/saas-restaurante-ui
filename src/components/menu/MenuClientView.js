@@ -169,32 +169,35 @@ if (error) {
 
   return (
     <div className="bg-gray-100 min-h-screen relative">
-     <header 
-        className="p-4 flex items-center justify-center space-x-4 text-white shadow-lg sticky top-0 z-20" 
-        style={{ backgroundColor: restaurante.cor_principal }}
-      >
-        {restaurante.logo && (
-          <Image 
-            src={restaurante.logo} 
-            alt={`Logo de ${restaurante.nome}`}
-            width={64}
-            height={64}
-            className="rounded-full object-cover border-2 border-white"
+     <div className="sticky top-0 z-20 shadow-lg">
+        <header 
+          className="p-4 flex items-center justify-center space-x-4 text-white" 
+          style={{ backgroundColor: restaurante.cor_principal }}
+        >
+          {restaurante.logo && (
+            <Image 
+              src={restaurante.logo} 
+              alt={`Logo de ${restaurante.nome}`}
+              width={64}
+              height={64}
+              className="rounded-md object-cover"
+            />
+          )}
+          <div className="text-left">
+            <h1 className="text-3xl font-bold">{restaurante.nome}</h1>
+            numeroMesa ? <p>MESA {numeroMesa}</p> 
+          </div>
+        </header>
+        
+        <nav className="bg-white/80 backdrop-blur-sm">
+          <CategoryMenu 
+            categorias={categorias}
+            corPrincipal={restaurante.cor_principal}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
           />
-        )}
-        <div className="text-left">
-          <h1 className="text-3xl font-bold">{restaurante.nome}</h1>
-          <p>Mesa {numeroMesa}</p>
-        </div>
-      </header>
-      <nav className="sticky top-[104px] bg-white/80 backdrop-blur-sm shadow-sm z-10">
-        <CategoryMenu 
-          categorias={categorias}
-          corPrincipal={restaurante.cor_principal}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-        />
-      </nav>
+        </nav>
+      </div>
 
       <main className="p-4 md:p-8 pb-24">
         {categoriasParaExibir.map((categoria) => (
