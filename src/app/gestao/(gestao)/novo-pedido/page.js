@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-// --- AJUSTE AQUI ---
-// Removemos "import { api }..." e importamos cada função necessária diretamente.
+
 import { 
   getSessions, 
   getMesas, 
