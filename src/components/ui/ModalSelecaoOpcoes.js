@@ -74,7 +74,6 @@ export default function ModalSelecaoOpcoes({ item, onConfirm, onCancel, corPrinc
       }
     }
 
-    // Envia a estrutura de dados agrupada para o componente pai
     onConfirm({
       gruposSelecionados: gruposSelecionados,
       quantidade: quantidade

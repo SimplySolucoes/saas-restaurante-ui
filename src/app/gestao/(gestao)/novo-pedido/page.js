@@ -1,23 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+// --- AJUSTE AQUI ---
+// Removemos "import { api }..." e importamos cada função necessária diretamente.
 import { 
   getSessions, 
+  getMesas, 
+  getRestaurante, 
   getGestaoCategorias, 
-  getGestaoItensCardapio, 
-  submitOrder,
-  getMesas,
-  getRestaurante,
-  createSessionByNumber
-} from "@/lib/api";
+  getGestaoItensCardapio,
+  abrirSessaoGarcom,
+  submitOrderGarcom
+} from "@/lib/api"; 
 
-// Componentes da interface
 import GarcomMenu from "@/components/gestao/GarcomMenu";
 import Toast from "@/components/ui/Toast";
 import ResumoPedido from "@/components/cart/ResumoPedido";
 import FloatingCartButton from "@/components/cart/FloatingCartButton";
 
 const LinhaMesa = ({ mesa, onAbrirSessao, onSelecionarParaAdicionar }) => {
+  // ... (código do componente LinhaMesa não precisa de alteração)
   const isOcupada = !!mesa.sessao;
   return (
     <div className={`p-4 rounded-lg shadow-sm flex items-center justify-between transition-all ${isOcupada ? 'bg-white' : 'bg-green-50'}`}>
@@ -36,7 +38,7 @@ const LinhaMesa = ({ mesa, onAbrirSessao, onSelecionarParaAdicionar }) => {
             </button>
           </>
         ) : (
-          <button onClick={() => onAbrirSessao(mesa.numero)} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">
+          <button onClick={() => onAbrirSessao(mesa.id)} className="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 text-sm">
             Abrir Sessão
           </button>
         )}
@@ -59,6 +61,7 @@ export default function NovoPedidoPage({ params, searchParams }) {
   const [carrinho, setCarrinho] = useState([]);
   const [isCarrinhoOpen, setIsCarrinhoOpen] = useState(false);
 
+
   const carregarDados = async () => {
     const token = localStorage.getItem("authToken");
     if (!token) {
@@ -67,6 +70,8 @@ export default function NovoPedidoPage({ params, searchParams }) {
     }
     setIsLoading(true);
     try {
+      // --- AJUSTE AQUI ---
+      // Removemos o prefixo "api." de todas as chamadas
       const [sessoesDaApi, mesasData, restauranteData, categoriasData, itensData] = await Promise.all([
         getSessions(token),
         getMesas(token),
@@ -106,17 +111,21 @@ export default function NovoPedidoPage({ params, searchParams }) {
     carregarDados();
   };
   
-  const handleAbrirSessao = async (numeroMesa) => {
-    if (!restaurante?.slug) return alert("Não foi possível identificar o restaurante.");
-    const novaSessao = await createSessionByNumber(restaurante.slug, numeroMesa);
+  const handleAbrirSessao = async (mesaId) => {
+    const token = localStorage.getItem("authToken");
+    
+    // --- AJUSTE AQUI ---
+    const novaSessao = await abrirSessaoGarcom(token, mesaId);
     if (novaSessao && !novaSessao.error) {
       await carregarDados();
+      setToastState({ show: true, message: `Sessão para a Mesa ${novaSessao.mesa.numero} aberta com sucesso!` });
     } else {
       alert(`Erro ao abrir sessão: ${novaSessao?.error || 'Erro desconhecido'}`);
     }
   };
 
    const handleAdicionarAoCarrinho = (itemParaAdicionar) => {
+    // ... (lógica interna não precisa de alteração)
     const idOpcoes = (itemParaAdicionar.gruposSelecionados || [])
       .flatMap(g => g.opcoes.map(o => o.id));
     const idOpcoesString = idOpcoes.sort().toString();
@@ -155,16 +164,25 @@ export default function NovoPedidoPage({ params, searchParams }) {
   };
 
   const handleSubmitPedido = async () => {
-    if (carrinho.length === 0) return;
-    const result = await submitOrder(selectedSessao.id, carrinho);
-    if (result && !result.error) {
-      setToastState({ show: true, message: "Pedido enviado com sucesso!" });
-      handleVoltarParaMesas();
-    } else {
-      alert(`Erro ao enviar pedido: ${result.error}`);
-    }
-  };
+  if (carrinho.length === 0) {
+    alert("O carrinho está vazio.");
+    return;
+  }
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    alert("Erro de autenticação. Faça login novamente.");
+    return;
+  }
+  const result = await submitOrderGarcom(token, selectedSessao.id, carrinho); 
+  if (result && !result.error) {
+    setToastState({ show: true, message: "Pedido enviado com sucesso!" });
+    handleVoltarParaMesas();
+  } else {
+    alert(`Erro ao enviar pedido: ${result.error || 'Ocorreu um erro desconhecido.'}`);
+  }
+};
 
+  // ... (restante do código JSX não precisa de alteração)
   if (isLoading) return <p className="p-6 text-center">A carregar...</p>;
   if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
 
@@ -208,7 +226,6 @@ export default function NovoPedidoPage({ params, searchParams }) {
     );
   }
 
-  // ETAPA DE SELEÇÃO DE MESA (TELA INICIAL)
   const mesasParaExibir = mesas.map(mesa => {
     const sessaoAtiva = sessoesAbertas.find(s => s.mesa.id === mesa.id);
     return { ...mesa, sessao: sessaoAtiva || null };
@@ -225,11 +242,11 @@ export default function NovoPedidoPage({ params, searchParams }) {
         {mesas.length === 0 ? (
           <p className="text-gray-500">Não há mesas cadastradas.</p>
         ) : (
-          mesasParaExibir.map((mesa) => (
+         mesasParaExibir.map((mesa) => (
             <LinhaMesa 
               key={mesa.id}
               mesa={mesa}
-              onAbrirSessao={handleAbrirSessao}
+              onAbrirSessao={() => handleAbrirSessao(mesa.id)}
               onSelecionarParaAdicionar={handleSelectSessao}
             />
           ))

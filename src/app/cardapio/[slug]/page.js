@@ -1,5 +1,3 @@
-// Em src/app/cardapio/[slug]/page.js
-
 import { getPublicCardapioData } from "@/lib/api";
 import MenuPublicoView from "@/components/menu-publico/MenuPublicoView"; 
 import { notFound } from 'next/navigation';

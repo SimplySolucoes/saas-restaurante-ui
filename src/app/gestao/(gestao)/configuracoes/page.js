@@ -10,10 +10,13 @@ import {
   createMenuItem, updateMenuItem, deleteMenuItem,
   createCategory, updateCategory, deleteCategory,
   toggleItemDisponibilidade 
-} from "@/lib/api";
+} from "@/lib/api/index";
 import ItemFormModal from "@/components/gestao/ItemFormModal";
 import CategoryFormModal from "@/components/gestao/CategoryFormModal";
 import OpcoesModal from '@/components/gestao/OpcoesModal';
+import useAuth from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
+
 
 const WhatsAppIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.269.655 4.502 1.906 6.344l-.295 1.023 1.07 1.031zM18.33 13.925c-.217-.112-.524-.26-1.517-.756-.471-.235-.82-.372-1.127-.088-.31.28-.6.732-.737.886-.137.155-.276.173-.523.062-.247-.11-.926-.34-.1763-1.057-.652-.569-1.104-1.26-1.225-1.485-.121-.225-.012-.354.099-.464.111-.111.247-.277.37-.423.122-.144.162-.24.24-.403.078-.166.038-.31-.02-.423-.058-.112-.51-.121-1.127-1.319-1.182-1.16-1.16-1.16-1.745-.698-.396.315-1.002.973-1.127 2.113-.125 1.14.83 2.522.95 2.671.12.149 1.942 3.018 4.819 4.223 2.877 1.205 2.877.803 3.402.746.525-.057 1.517-.613 1.73-1.227.212-.613.212-1.14-.049-1.258z"/></svg> );
 const DownloadIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /> </svg> );
@@ -29,6 +32,19 @@ const GerirRestaurante = ({ restaurante, onSave }) => {
 };
 
 export default function ConfiguracoesPage() {
+
+  const { user, isAdmin, isLoading: isAuthLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthLoading) {
+
+      if (!isAdmin) {
+        alert("Acesso negado. Apenas administradores podem aceder a esta página.");
+        router.push('/gestao'); 
+      }
+    }
+  }, [isAuthLoading, isAdmin, router]);
   const [categorias, setCategorias] = useState([]);
   const [itens, setItens] = useState([]);
   const [mesas, setMesas] = useState([]);
@@ -44,6 +60,7 @@ export default function ConfiguracoesPage() {
   const [categoryToEdit, setCategoryToEdit] = useState(null);
 
   const [itemParaGerirOpcoes, setItemParaGerirOpcoes] = useState(null);
+
 
   const carregarDados = async () => {
     const token = localStorage.getItem("authToken");

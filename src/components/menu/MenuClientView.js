@@ -185,7 +185,7 @@ if (error) {
           )}
           <div className="text-left">
             <h1 className="text-3xl font-bold">{restaurante.nome}</h1>
-            numeroMesa ? <p>MESA {numeroMesa}</p> 
+             <p>MESA {numeroMesa}</p> 
           </div>
         </header>
         

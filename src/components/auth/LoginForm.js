@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { loginUser } from "@/lib/api";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { loginUser } from '@/lib/api/auth'; 
 
 export default function LoginForm({ corPrincipal }) {
   const router = useRouter();
@@ -16,12 +16,23 @@ export default function LoginForm({ corPrincipal }) {
     setError(null);
     setIsLoading(true);
 
+    // Chama a nova função de login que aponta para /api/accounts/login/
     const result = await loginUser({ username, password });
+    
     setIsLoading(false);
 
-    if (result.token) {
+    // ALTERADO: Verificamos se recebemos o token E os dados do utilizador
+    if (result.token && result.user) {
+      // 1. Guarda o token de autenticação, como antes
       localStorage.setItem("authToken", result.token);
+      
+      // 2. NOVO E IMPORTANTE: Guarda o objeto completo do utilizador (com o cargo)
+      localStorage.setItem("userData", JSON.stringify(result.user));
+
+      // 3. Redireciona para o painel de gestão
       router.push("/gestao");
+      // Força a atualização dos componentes do lado do servidor para ler o novo estado de login
+      router.refresh(); 
     } else {
       setError(result.error || "Ocorreu um erro desconhecido.");
     }
@@ -77,3 +88,4 @@ export default function LoginForm({ corPrincipal }) {
     </form>
   );
 }
+

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import ModalSelecaoOpcoes from '../ui/ModalSelecaoOpcoes';
+import ModalSelecaoOpcoes from '@/components/ui/ModalSelecaoOpcoes';
 
 export default function GarcomMenu({ 
   categorias, 
@@ -20,12 +20,11 @@ export default function GarcomMenu({
     if (item.tem_opcoes) {
       setItemParaOpcoes(item);
     } else {
-      // Para itens simples, envia a estrutura correta com 'gruposSelecionados' vazio
       onAdicionarAoCarrinho({
         produtoId: item.id,
         nome: item.nome,
         preco: item.preco,
-        gruposSelecionados: [], // ALTERADO: A chave agora é 'gruposSelecionados'
+        gruposSelecionados: [],
         quantidade: 1
       });
     }
@@ -39,7 +38,7 @@ export default function GarcomMenu({
       produtoId: itemParaOpcoes.id,
       nome: itemParaOpcoes.nome,
       preco: itemParaOpcoes.preco,
-      gruposSelecionados: dadosDoModal.gruposSelecionados, // ALTERADO: A chave agora é 'gruposSelecionados'
+      gruposSelecionados: dadosDoModal.gruposSelecionados, // Estrutura correta
       quantidade: dadosDoModal.quantidade
     });
     
@@ -104,3 +103,4 @@ export default function GarcomMenu({
     </div>
   );
 }
+
