@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { 
   getSessions, 
@@ -10,7 +11,8 @@ import {
   getGestaoItensCardapio,
   abrirSessaoGarcom,
   submitOrderGarcom
-} from "@/lib/api"; 
+} from "@/lib/api";
+import { navFlagsFromRestaurante } from "@/lib/gestaoNav";
 
 import GarcomMenu from "@/components/gestao/GarcomMenu";
 import Toast from "@/components/ui/Toast";
@@ -47,6 +49,7 @@ const LinhaMesa = ({ mesa, onAbrirSessao, onSelecionarParaAdicionar }) => {
 };
 
 export default function NovoPedidoPage({ params, searchParams }) {
+  const router = useRouter();
   const [sessoesAbertas, setSessoesAbertas] = useState([]);
   const [mesas, setMesas] = useState([]);
   const [restaurante, setRestaurante] = useState(null);
@@ -97,6 +100,13 @@ export default function NovoPedidoPage({ params, searchParams }) {
   useEffect(() => {
     carregarDados();
   }, []);
+
+  useEffect(() => {
+    if (!restaurante) return;
+    if (!navFlagsFromRestaurante(restaurante).novoPedido) {
+      router.replace("/gestao");
+    }
+  }, [restaurante, router]);
 
   const handleSelectSessao = (sessao) => {
     setCarrinho([]);

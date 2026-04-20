@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { getSessions, closeSession, updateItemStatus } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { getSessions, closeSession, updateItemStatus, getRestaurante } from "@/lib/api";
+import { navFlagsFromRestaurante } from "@/lib/gestaoNav";
 import CancelItemModal from "@/components/gestao/CancelItemModal";
 
 const StatusBadge = ({ item, onStatusChange }) => {
@@ -35,11 +37,26 @@ const getSessionPriority = (sessao) => {
 };
 
 export default function GestaoDashboardPage() {
+  const router = useRouter();
   const [sessoes, setSessoes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [itemToCancel, setItemToCancel] = useState(null);
   const sessoesRef = useRef([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+      const r = await getRestaurante(token);
+      if (cancelled || !r) return;
+      if (!navFlagsFromRestaurante(r).mesaAtiva) router.replace("/gestao");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   const carregarSessoes = async (isInitialLoad = false) => {
     if (isInitialLoad) setIsLoading(true);

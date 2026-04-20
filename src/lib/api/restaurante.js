@@ -21,6 +21,25 @@ export async function getRestaurante(token) {
   }
 }
 
+export async function baixarQrcodeCardapioPublico(token) {
+  if (!token) return { error: 'Token em falta.' };
+  try {
+    const response = await fetch(
+      `${API_URL}/restaurantes/meu/baixar-qrcode-cardapio-publico/`,
+      { headers: { Authorization: `Token ${token}` } }
+    );
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(errText || `Falha ao obter QR code (Status: ${response.status})`);
+    }
+    const blob = await response.blob();
+    return { blob };
+  } catch (error) {
+    console.error('API Error (baixarQrcodeCardapioPublico):', error);
+    return { error: error.message };
+  }
+}
+
 export async function updateRestaurante(token, restauranteData) {
   if (!token) return { error: "Token de autenticação em falta." };
 

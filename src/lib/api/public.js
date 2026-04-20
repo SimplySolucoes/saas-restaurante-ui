@@ -17,10 +17,14 @@ export async function getPublicCardapioData(slug) {
 
 export async function getBrandingBySlug(slug) {
   try {
-    const response = await fetch(`${API_URL}/branding/${slug}/`);
+    const response = await fetch(`${API_URL}/branding/${slug}/`, {
+      cache: "no-store"
+    });
+
     if (!response.ok) {
       return null;
     }
+
     return await response.json();
   } catch (error) {
     console.error("API Error ao buscar branding:", error);

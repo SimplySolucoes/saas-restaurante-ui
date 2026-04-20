@@ -1,13 +1,10 @@
-// Removido o import { api }...
 import { getBrandingBySlug } from "@/lib/api";
 import LoginForm from "@/components/auth/LoginForm";
 import Image from "next/image";
 
 export default async function LoginPage({ params }) {
-  const { slug } = params;
+  const { slug } = await params;
   
-  // --- AJUSTE AQUI ---
-  // Chamamos a função diretamente, sem o prefixo "api."
   const branding = await getBrandingBySlug(slug);
 
   if (!branding) {
