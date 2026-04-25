@@ -12,10 +12,25 @@ const EditIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-4 
 const DeleteIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg> );
 const SaveIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg> );
 const AddIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>);
-const CancelIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>);
+const CancelIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg> );
 
+/** Normaliza preço adicional para string com duas casas (aceita vírgula decimal estilo PT). */
+function parsePrecoAdicional(raw) {
+    if (raw === null || raw === undefined) return '0.00';
+    let s = String(raw).trim();
+    if (s === '') return '0.00';
+    if (s.includes(',')) {
+        const lastComma = s.lastIndexOf(',');
+        const intPart = s.slice(0, lastComma).replace(/\./g, '');
+        const decPart = s.slice(lastComma + 1);
+        s = decPart.length ? `${intPart}.${decPart}` : intPart;
+    }
+    const n = parseFloat(s);
+    if (!Number.isFinite(n)) return '0.00';
+    return n.toFixed(2);
+}
 
-const GrupoEditor = ({ grupo, corPrincipal, onReloadGrupos }) => {
+const GrupoEditor = ({ grupo, corPrincipal, onReloadGrupos, onActionError }) => {
     const [isEditingGrupo, setIsEditingGrupo] = useState(false);
     const [grupoFormData, setGrupoFormData] = useState(grupo);
     
@@ -39,21 +54,31 @@ const GrupoEditor = ({ grupo, corPrincipal, onReloadGrupos }) => {
             max_selecoes: grupoFormData.max_selecoes,
             obrigatorio: grupoFormData.obrigatorio,
         };
-        await updateGrupoOpcao(token, grupo.id, payload);
-        onReloadGrupos();
+        const result = await updateGrupoOpcao(token, grupo.id, payload);
+        if (result?.error) {
+            onActionError(result.error);
+            return;
+        }
+        onActionError(null);
+        await onReloadGrupos();
         setIsEditingGrupo(false);
     };
 
     const handleAddItemOpcao = async () => {
         if (!token || !grupo.id || !novoItemNome) return;
         const payload = {
-            nome: novoItemNome,
-            preco_adicional: parseFloat(novoItemPreco || 0).toFixed(2),
+            nome: novoItemNome.trim(),
+            preco_adicional: parsePrecoAdicional(novoItemPreco),
         };
-        await createItemOpcao(token, grupo.id, payload);
+        const result = await createItemOpcao(token, grupo.id, payload);
+        if (result?.error) {
+            onActionError(result.error);
+            return;
+        }
+        onActionError(null);
         setNovoItemNome('');
         setNovoItemPreco('');
-        onReloadGrupos();
+        await onReloadGrupos();
     };
 
     const handleEditItemClick = (item) => {
@@ -64,20 +89,31 @@ const GrupoEditor = ({ grupo, corPrincipal, onReloadGrupos }) => {
     const handleSaveItemOpcao = async (itemId) => {
         if (!token) return;
         const payload = {
-            nome: editingItemData.nome,
-            preco_adicional: parseFloat(editingItemData.preco_adicional || 0).toFixed(2),
+            nome: editingItemData.nome.trim(),
+            preco_adicional: parsePrecoAdicional(editingItemData.preco_adicional),
         };
-        await updateItemOpcao(token, itemId, payload);
+        const result = await updateItemOpcao(token, itemId, payload);
+        if (result?.error) {
+            onActionError(result.error);
+            return;
+        }
+        onActionError(null);
         setEditingItemId(null);
-        onReloadGrupos();
+        await onReloadGrupos();
     };
     
     const handleDeleteItem = async (itemId) => {
-        if (window.confirm('Tem certeza que deseja apagar esta opção?')) {
-            await deleteItemOpcao(token, itemId);
-            onReloadGrupos();
+        if (!window.confirm('Tem certeza que deseja apagar esta opção?')) return;
+        const result = await deleteItemOpcao(token, itemId);
+        if (result?.error) {
+            onActionError(result.error);
+            return;
         }
+        onActionError(null);
+        await onReloadGrupos();
     };
+
+    const itensOpcao = grupo.itens_opcao || [];
 
     return (
         <div className="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200">
@@ -107,12 +143,12 @@ const GrupoEditor = ({ grupo, corPrincipal, onReloadGrupos }) => {
             )}
 
             <div className="pl-4 mt-2 border-l-2 border-gray-200 space-y-2">
-                {grupo.itens_opcao.map(item => (
+                {itensOpcao.map(item => (
                     <div key={item.id}>
                         {editingItemId === item.id ? (
                             <div className="flex gap-2 items-center p-2 bg-white rounded shadow">
                                 <input type="text" value={editingItemData.nome} onChange={(e) => setEditingItemData({...editingItemData, nome: e.target.value})} className="flex-grow text-sm p-1 border rounded"/>
-                                <input type="number" step="0.01" value={editingItemData.preco_adicional} onChange={(e) => setEditingItemData({...editingItemData, preco_adicional: e.target.value})} className="w-24 text-sm p-1 border rounded" placeholder="Preço Adic."/>
+                                <input type="text" inputMode="decimal" value={editingItemData.preco_adicional} onChange={(e) => setEditingItemData({...editingItemData, preco_adicional: e.target.value})} className="w-24 text-sm p-1 border rounded" placeholder="Preço Adic."/>
                                 <button type="button" onClick={() => handleSaveItemOpcao(item.id)} className="text-green-600 hover:text-green-800"><SaveIcon /></button>
                                 <button type="button" onClick={() => setEditingItemId(null)} className="text-gray-500 hover:text-gray-700"><CancelIcon /></button>
                             </div>
@@ -121,8 +157,8 @@ const GrupoEditor = ({ grupo, corPrincipal, onReloadGrupos }) => {
                                 <span className="text-gray-800">{item.nome}</span>
                                 <div className="flex items-center gap-3">
                                     <span className="font-medium text-gray-800">+ R$ {parseFloat(item.preco_adicional).toFixed(2)}</span>
-                                    <button onClick={() => handleEditItemClick(item)} className="text-gray-500 hover:text-indigo-600"><EditIcon /></button>
-                                    <button onClick={() => handleDeleteItem(item.id)} className="text-gray-500 hover:text-red-600"><DeleteIcon /></button>
+                                    <button type="button" onClick={() => handleEditItemClick(item)} className="text-gray-500 hover:text-indigo-600"><EditIcon /></button>
+                                    <button type="button" onClick={() => handleDeleteItem(item.id)} className="text-gray-500 hover:text-red-600"><DeleteIcon /></button>
                                 </div>
                             </div>
                         )}
@@ -130,8 +166,8 @@ const GrupoEditor = ({ grupo, corPrincipal, onReloadGrupos }) => {
                 ))}
                 <div className="flex gap-2 pt-2 border-t mt-2">
                     <input type="text" value={novoItemNome} onChange={(e) => setNovoItemNome(e.target.value)} className="flex-grow text-sm p-1 border rounded" placeholder="Nome da nova opção"/>
-                    <input type="number" step="0.01" value={novoItemPreco} onChange={(e) => setNovoItemPreco(e.target.value)} className="w-24 text-sm p-1 border rounded" placeholder="Preço Adic."/>
-                    <button type="button" onClick={handleAddItemOpcao} disabled={!novoItemNome} className="text-white p-2 rounded flex items-center justify-center disabled:opacity-50" style={{backgroundColor: corPrincipal}}>
+                    <input type="text" inputMode="decimal" value={novoItemPreco} onChange={(e) => setNovoItemPreco(e.target.value)} className="w-24 text-sm p-1 border rounded" placeholder="Preço Adic."/>
+                    <button type="button" onClick={handleAddItemOpcao} disabled={!novoItemNome.trim()} className="text-white p-2 rounded flex items-center justify-center disabled:opacity-50" style={{backgroundColor: corPrincipal}}>
                         <AddIcon />
                     </button>
                 </div>
@@ -145,17 +181,14 @@ export default function OpcoesModal({ item, onClose, corPrincipal }) {
   const [grupos, setGrupos] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
   const [novoGrupoNome, setNovoGrupoNome] = useState('');
   const token = typeof window !== 'undefined' ? localStorage.getItem("authToken") : null;
-  console.log("Objeto 'item' recebido pelo OpcoesModal:", item);
 
   const fetchGrupos = async () => {
-    console.log("1. Iniciando busca de grupos para o item ID:", item?.id);
-
     if (!token || !item?.id) { 
         setError("Item ID ou token de autenticação não disponível."); 
         setIsLoading(false); 
-        console.log("-> Busca cancelada, token ou ID ausente.");
         return; 
     }
     
@@ -164,18 +197,18 @@ export default function OpcoesModal({ item, onClose, corPrincipal }) {
 
     try {
         const gruposData = await getGruposOpcao(token, item.id);
-        console.log("2. API respondeu com sucesso. Dados recebidos:", gruposData);
-        setGrupos(gruposData);
+        setGrupos(Array.isArray(gruposData) ? gruposData : []);
     } catch (e) {
-        console.error("-> Erro na busca da API:", e);
+        console.error("Erro ao carregar grupos de opções:", e);
         setError("Falha ao carregar os grupos de opções.");
     } finally {
-        console.log("3. Finalizando busca, definindo isLoading para false.");
         setIsLoading(false);
     }
   };
+
   useEffect(() => {
     if (item?.id) {
+        setActionError(null);
         fetchGrupos();
     }
   }, [item?.id]);
@@ -183,24 +216,33 @@ export default function OpcoesModal({ item, onClose, corPrincipal }) {
   if (!item) return null;
 
   const handleAddGrupo = async () => {
-      if (!token || !item.id || !novoGrupoNome) return;
+      if (!token || !item.id || !novoGrupoNome.trim()) return;
       const payload = {
-          nome: novoGrupoNome,
+          nome: novoGrupoNome.trim(),
           min_selecoes: 0,
           max_selecoes: 1,
           obrigatorio: false
       };
-      await createGrupoOpcao(token, item.id, payload);
+      const result = await createGrupoOpcao(token, item.id, payload);
+      if (result?.error) {
+          setActionError(result.error);
+          return;
+      }
+      setActionError(null);
       setNovoGrupoNome('');
       await fetchGrupos();
   };
   
   const handleDeleteGrupo = async (grupoId) => {
     if (!token) return;
-    if (window.confirm("Tem certeza que deseja apagar este grupo? Todas as opções dentro dele também serão apagadas.")) {
-      await deleteGrupoOpcao(token, grupoId);
-      await fetchGrupos();
+    if (!window.confirm("Tem certeza que deseja apagar este grupo? Todas as opções dentro dele também serão apagadas.")) return;
+    const result = await deleteGrupoOpcao(token, grupoId);
+    if (result?.error) {
+        setActionError(result.error);
+        return;
     }
+    setActionError(null);
+    await fetchGrupos();
   };
 
   const renderContent = () => {
@@ -208,9 +250,14 @@ export default function OpcoesModal({ item, onClose, corPrincipal }) {
     if (error) return <div className="text-center py-8 text-red-600">{error}</div>;
     return (
       <div className="space-y-6">
+          {actionError && (
+            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 border border-red-200" role="alert">
+              {actionError}
+            </div>
+          )}
           <div className="flex gap-2 items-center bg-blue-50 p-3 rounded-lg border border-blue-200">
-              <input type="text" value={novoGrupoNome} onChange={(e) => setNovoGrupoNome(e.target.value)} className="flex-grow text-sm p-2 border rounded-md" placeholder="Nome do novo grupo (ex: Tamanho)"/>
-              <button type="button" onClick={handleAddGrupo} disabled={!novoGrupoNome} className="text-white font-bold py-2 px-4 rounded-lg text-sm disabled:opacity-50 flex items-center gap-1" style={{backgroundColor: corPrincipal}}>
+              <input type="text" value={novoGrupoNome} onChange={(e) => { setNovoGrupoNome(e.target.value); if (actionError) setActionError(null); }} className="flex-grow text-sm p-2 border rounded-md" placeholder="Nome do novo grupo (ex: Tamanho)"/>
+              <button type="button" onClick={handleAddGrupo} disabled={!novoGrupoNome.trim()} className="text-white font-bold py-2 px-4 rounded-lg text-sm disabled:opacity-50 flex items-center gap-1" style={{backgroundColor: corPrincipal}}>
                   <AddIcon /> Adicionar Grupo
               </button>
           </div>
@@ -219,9 +266,9 @@ export default function OpcoesModal({ item, onClose, corPrincipal }) {
                 <div key={grupo.id}>
                   <div className="flex justify-between items-center mb-1">
                       <h4 className="font-semibold text-gray-700">{grupo.nome}</h4>
-                      <button onClick={() => handleDeleteGrupo(grupo.id)} className="text-gray-400 hover:text-red-600 text-xs">Apagar Grupo</button>
+                      <button type="button" onClick={() => handleDeleteGrupo(grupo.id)} className="text-gray-400 hover:text-red-600 text-xs">Apagar Grupo</button>
                   </div>
-                  <GrupoEditor grupo={grupo} corPrincipal={corPrincipal} onReloadGrupos={fetchGrupos} />
+                  <GrupoEditor grupo={grupo} corPrincipal={corPrincipal} onReloadGrupos={fetchGrupos} onActionError={setActionError} />
                 </div>
               ))}
               {grupos.length === 0 && <p className="text-gray-500 text-sm italic">Ainda não há grupos de opções para este item.</p>}

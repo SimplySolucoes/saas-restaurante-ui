@@ -12,7 +12,7 @@ import {
   abrirSessaoGarcom,
   submitOrderGarcom
 } from "@/lib/api";
-import { navFlagsFromRestaurante } from "@/lib/gestaoNav";
+import { navFlagsFromRestaurante, MODO_OPERACAO } from "@/lib/gestaoNav";
 
 import GarcomMenu from "@/components/gestao/GarcomMenu";
 import Toast from "@/components/ui/Toast";
@@ -105,6 +105,10 @@ export default function NovoPedidoPage({ params, searchParams }) {
     if (!restaurante) return;
     if (!navFlagsFromRestaurante(restaurante).novoPedido) {
       router.replace("/gestao");
+      return;
+    }
+    if (restaurante.modo_operacao === MODO_OPERACAO.PRE_PAGO_WEB) {
+      router.replace("/gestao/pedido-bar");
     }
   }, [restaurante, router]);
 

@@ -10,6 +10,7 @@ export default function ResumoPedido({
   onAumentarQtde,
   onDiminuirQtde,
   onRemoverItem,
+  confirmarDesabilitado = false,
 }) {
 
   const calcularSubtotalLinha = (item) => {
@@ -103,7 +104,7 @@ export default function ResumoPedido({
             onClick={onConfirmar}
             className="w-full text-white font-bold py-3 px-6 rounded-lg shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
             style={{ backgroundColor: corPrincipal || '#4F46E5'}}
-            disabled={itensDoCarrinho.length === 0}
+            disabled={itensDoCarrinho.length === 0 || confirmarDesabilitado}
           >
             <span>{textoBotaoPrincipal}</span>
           </button>

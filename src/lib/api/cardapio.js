@@ -194,6 +194,34 @@ export async function toggleItemDisponibilidade(token, itemId, data) {
 
 
 // --- Gestão de Opções ---
+
+/** Junta mensagens de validação / detail do DRF num único texto legível. */
+export function formatDrfApiErrors(data) {
+  if (data == null) return 'Ocorreu um erro.';
+  if (typeof data === 'string') return data.trim() || 'Ocorreu um erro.';
+  if (typeof data !== 'object') return 'Ocorreu um erro.';
+
+  const collect = (node, acc) => {
+    if (node === null || node === undefined) return;
+    if (typeof node === 'string' || typeof node === 'number' || typeof node === 'boolean') {
+      const s = String(node).trim();
+      if (s) acc.push(s);
+      return;
+    }
+    if (Array.isArray(node)) {
+      for (const el of node) collect(el, acc);
+      return;
+    }
+    if (typeof node === 'object') {
+      for (const v of Object.values(node)) collect(v, acc);
+    }
+  };
+
+  const parts = [];
+  collect(data, parts);
+  return parts.join(' ') || 'Ocorreu um erro.';
+}
+
 export async function getGruposOpcao(token, itemId) {
   const headers = {};
   if (token) {
@@ -225,7 +253,7 @@ export async function createGrupoOpcao(token, itemId, grupoData) {
       body: JSON.stringify(grupoData),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(Object.values(data).flat().join(' '));
+    if (!response.ok) throw new Error(formatDrfApiErrors(data));
     return data;
   } catch (error) {
     return { error: error.message };
@@ -244,7 +272,7 @@ export async function updateGrupoOpcao(token, grupoId, grupoData) {
       body: JSON.stringify(grupoData),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(Object.values(data).flat().join(' '));
+    if (!response.ok) throw new Error(formatDrfApiErrors(data));
     return data;
   } catch (error) {
     return { error: error.message };
@@ -258,7 +286,16 @@ export async function deleteGrupoOpcao(token, grupoId) {
             method: 'DELETE',
             headers: { 'Authorization': `Token ${token}` },
         });
-        if (!response.ok) throw new Error('Falha ao apagar o grupo.');
+        if (!response.ok) {
+            let msg = 'Falha ao apagar o grupo.';
+            try {
+                const data = await response.json();
+                msg = formatDrfApiErrors(data);
+            } catch {
+                /* corpo vazio ou não-JSON */
+            }
+            throw new Error(msg);
+        }
         return { success: true };
     } catch (error) {
         return { error: error.message };
@@ -277,7 +314,7 @@ export async function createItemOpcao(token, grupoId, itemData) {
       body: JSON.stringify(itemData),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(Object.values(data).flat().join(' '));
+    if (!response.ok) throw new Error(formatDrfApiErrors(data));
     return data;
   } catch (error) {
     return { error: error.message };
@@ -296,7 +333,7 @@ export async function updateItemOpcao(token, itemId, itemData) {
             body: JSON.stringify(itemData),
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(Object.values(data).flat().join(' '));
+        if (!response.ok) throw new Error(formatDrfApiErrors(data));
         return data;
     } catch (error) {
         return { error: error.message };
@@ -310,7 +347,16 @@ export async function deleteItemOpcao(token, itemId) {
             method: 'DELETE',
             headers: { 'Authorization': `Token ${token}` },
         });
-        if (!response.ok) throw new Error('Falha ao apagar o item de opção.');
+        if (!response.ok) {
+            let msg = 'Falha ao apagar o item de opção.';
+            try {
+                const data = await response.json();
+                msg = formatDrfApiErrors(data);
+            } catch {
+                /* corpo vazio ou não-JSON */
+            }
+            throw new Error(msg);
+        }
         return { success: true };
     } catch (error) {
         return { error: error.message };

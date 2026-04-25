@@ -1,20 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import MenuItemCard from "./MenuItemCard";
 import FloatingCartButton from "../cart/FloatingCartButton";
 import ResumoPedido from "../cart/ResumoPedido"; 
 import CategoryMenu from "./CategoryMenu";
-import { createSessionByNumber, submitOrder } from "@/lib/api";
+import { createSessionByNumber, submitOrder, getSessionStatus, createPedidoPrePago } from "@/lib/api";
+import { isModoPrePago } from "@/lib/gestaoNav";
 import Toast from "@/components/ui/Toast";
-import ModalSelecaoOpcoes from "@/components/ui/ModalSelecaoOpcoes"; 
+import ModalSelecaoOpcoes from "@/components/ui/ModalSelecaoOpcoes";
+import ModalDadosCompradorPrepago from "@/components/prepago/ModalDadosCompradorPrepago";
 
 export default function MenuClientView({ initialData, slug, numeroMesa }) {
+  const router = useRouter();
   const { restaurante, categorias, itens } = initialData;
+  const prepago = isModoPrePago(restaurante);
+  const pedidosForaDoHorario =
+    prepago && restaurante.aceita_pedidos_agora === false;
 
   const [carrinho, setCarrinho] = useState([]);
   const [isCarrinhoOpen, setIsCarrinhoOpen] = useState(false);
+  const [modalCompradorAberto, setModalCompradorAberto] = useState(false);
+  const [enviandoPrepago, setEnviandoPrepago] = useState(false);
+  const [erroApiPrepago, setErroApiPrepago] = useState("");
   const [itemParaOpcoes, setItemParaOpcoes] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [sessao, setSessao] = useState(null);
@@ -26,36 +36,39 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const sessionKey = `sessao_${slug}_${numeroMesa}`;
 
 
-   useEffect(() => {
-    if (!sessao) return;
+  useEffect(() => {
+    if (!sessao?.id || sessao.prepago) return;
 
     const intervalId = setInterval(async () => {
       const sessaoAtualizada = await getSessionStatus(sessao.id);
 
-      if (sessaoAtualizada.status === 'fechada') {
+      if (sessaoAtualizada.status === "fechada") {
         alert("Esta conta foi encerrada. Obrigado!");
-        
+
         localStorage.removeItem(cartKey);
         localStorage.removeItem(sessionKey);
-        window.location.reload(); 
+        window.location.reload();
       }
-    }, 10000); 
+    }, 10000);
 
     return () => clearInterval(intervalId);
-
-  }, [sessao, cartKey, sessionKey]); 
+  }, [sessao, cartKey, sessionKey]);
 
   useEffect(() => {
     const storedCart = localStorage.getItem(cartKey);
     if (storedCart) {
       setCarrinho(JSON.parse(storedCart));
     }
-    const storedSession = localStorage.getItem(`sessao_${slug}_${numeroMesa}`);
-    if (storedSession) {
-      setSessao(JSON.parse(storedSession));
+    if (prepago) {
+      setSessao({ prepago: true });
+    } else {
+      const storedSession = localStorage.getItem(`sessao_${slug}_${numeroMesa}`);
+      if (storedSession) {
+        setSessao(JSON.parse(storedSession));
+      }
     }
     setIsLoading(false);
-  }, [slug, numeroMesa, cartKey]);
+  }, [slug, numeroMesa, cartKey, prepago]);
 
   useEffect(() => {
     if (carrinho.length > 0) {
@@ -123,25 +136,88 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     setIsLoading(false);
   };
 
-  const handleSubmitOrder = async () => {
+  const handleResumoConfirmar = async () => {
+    if (prepago) {
+      if (pedidosForaDoHorario) {
+        setToastState({
+          show: true,
+          message: "Fora do horário de pedidos.",
+          type: "error",
+        });
+        return;
+      }
+      setIsCarrinhoOpen(false);
+      setErroApiPrepago("");
+      setModalCompradorAberto(true);
+      return;
+    }
+    await handleSubmitOrderMesa();
+  };
+
+  const handleModalCompradorConfirmar = async (nome, telefone) => {
+    setEnviandoPrepago(true);
+    setErroApiPrepago("");
+    const result = await createPedidoPrePago(slug, carrinho, null, {
+      observacoesGerais: "",
+      compradorNome: nome,
+      compradorTelefone: telefone,
+    });
+    setEnviandoPrepago(false);
+    if (result?.error) {
+      setErroApiPrepago(result.error);
+      return;
+    }
+    setModalCompradorAberto(false);
+    setCarrinho([]);
+    localStorage.removeItem(cartKey);
+    const codigo = result.codigo_retirada || "";
+    const q = new URLSearchParams();
+    if (codigo) q.set("codigo", codigo);
+    if (nome) q.set("nome", nome);
+    router.push(`/cardapio/${slug}/pedido-realizado?${q.toString()}`);
+  };
+
+  const handleSubmitOrderMesa = async () => {
     setIsLoading(true);
     setError(null);
-      if (!sessao || !sessao.id) {
-      setError("Sessão inválida. Por favor, recarregue a página.");
-      setToastState({ show: true, message: 'Sessão inválida. Recarregue a página.', type: 'error' });
+    if (pedidosForaDoHorario) {
+      setToastState({
+        show: true,
+        message: "Fora do horário de pedidos.",
+        type: "error",
+      });
       setIsLoading(false);
-      return; 
+      return;
     }
-    
+
+    if (!sessao || !sessao.id) {
+      setError("Sessão inválida. Por favor, recarregue a página.");
+      setToastState({
+        show: true,
+        message: "Sessão inválida. Recarregue a página.",
+        type: "error",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const result = await submitOrder(sessao.id, carrinho);
 
     if (result && !result.error) {
-      setToastState({ show: true, message: "Pedido enviado com sucesso!", type: 'success' });
+      setToastState({
+        show: true,
+        message: "Pedido enviado com sucesso!",
+        type: "success",
+      });
       setCarrinho([]);
       setIsCarrinhoOpen(false);
       localStorage.removeItem(cartKey);
     } else {
-      setToastState({ show: true, message: `Erro: ${result.error}`, type: 'error' });
+      setToastState({
+        show: true,
+        message: `Erro: ${result.error}`,
+        type: "error",
+      });
     }
     setIsLoading(false);
   };
@@ -149,13 +225,20 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const totalItemsInCart = carrinho.reduce((total, item) => total + item.quantidade, 0);
   const categoriasParaExibir = selectedCategory ? categorias.filter(cat => cat.nome === selectedCategory) : categorias;
 
+  const subtituloMesa =
+    prepago && String(numeroMesa).toLowerCase() === "balcao"
+      ? "Pedido para retirada"
+      : prepago
+        ? `Mesa ${numeroMesa} · Retirada`
+        : `MESA ${numeroMesa}`;
+
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">A carregar...</div>;
   }
 if (error) {
     return <div className="flex h-screen items-center justify-center text-red-500">{error}</div>;
   }
-  if (!sessao) {
+  if (!sessao && !prepago) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-gray-100 p-4">
         <h1 className="text-4xl font-bold" style={{ color: restaurante.cor_principal }}>Bem-vindo a {restaurante.nome}!</h1>
@@ -185,7 +268,7 @@ if (error) {
           )}
           <div className="text-left">
             <h1 className="text-3xl font-bold">{restaurante.nome}</h1>
-             <p>MESA {numeroMesa}</p> 
+            <p>{subtituloMesa}</p>
           </div>
         </header>
         
@@ -197,6 +280,11 @@ if (error) {
             onSelectCategory={setSelectedCategory}
           />
         </nav>
+        {pedidosForaDoHorario && (
+          <div className="bg-amber-100 text-amber-900 text-center text-sm font-medium py-2 px-4">
+            Estamos fora do horário de pedidos. Não é possível finalizar o pedido neste momento.
+          </div>
+        )}
       </div>
 
       <main className="p-4 md:p-8 pb-24">
@@ -230,6 +318,20 @@ if (error) {
         />
       </div>
 
+      <ModalDadosCompradorPrepago
+        open={modalCompradorAberto}
+        onClose={() => {
+          if (!enviandoPrepago) {
+            setModalCompradorAberto(false);
+            setErroApiPrepago("");
+          }
+        }}
+        corPrincipal={restaurante.cor_principal}
+        loading={enviandoPrepago}
+        apiError={erroApiPrepago}
+        onConfirmar={handleModalCompradorConfirmar}
+      />
+
       {itemParaOpcoes && (
         <ModalSelecaoOpcoes
           item={itemParaOpcoes}
@@ -247,10 +349,12 @@ if (error) {
           itensDoCarrinho={carrinho}
           corPrincipal={restaurante.cor_principal}
           onFechar={() => setIsCarrinhoOpen(false)}
-          onConfirmar={handleSubmitOrder}
+          onConfirmar={handleResumoConfirmar}
           onAumentarQtde={(item) => handleAlterarQuantidade(item, 1)}
           onDiminuirQtde={(item) => handleAlterarQuantidade(item, -1)}
           onRemoverItem={handleRemoverItem}
+          textoBotaoPrincipal={prepago ? "Confirmar pedido" : "Enviar Pedido"}
+          confirmarDesabilitado={pedidosForaDoHorario}
         />
       )}
       
