@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   desconectarMercadoPago,
@@ -66,23 +66,33 @@ export default function SecaoMercadoPagoGestao({ onIntegracaoChange }) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const onIntegracaoChangeRef = useRef(onIntegracaoChange);
+  const mpQueryHandledRef = useRef(false);
 
-  const carregarIntegracao = useCallback(async () => {
+  useEffect(() => {
+    onIntegracaoChangeRef.current = onIntegracaoChange;
+  }, [onIntegracaoChange]);
+
+  const carregarIntegracao = useCallback(async ({ silent = false } = {}) => {
     const token = localStorage.getItem("authToken");
     if (!token) {
       setIsLoading(false);
       return;
     }
-    setIsLoading(true);
+    if (!silent) {
+      setIsLoading(true);
+    }
     const data = await getIntegracaoMercadoPago(token);
-    setIsLoading(false);
+    if (!silent) {
+      setIsLoading(false);
+    }
     if (data.error) {
       setIntegracao(null);
       return;
     }
     setIntegracao(data);
-    onIntegracaoChange?.(data);
-  }, [onIntegracaoChange]);
+    onIntegracaoChangeRef.current?.(data);
+  }, []);
 
   useEffect(() => {
     carregarIntegracao();
@@ -90,13 +100,15 @@ export default function SecaoMercadoPagoGestao({ onIntegracaoChange }) {
 
   useEffect(() => {
     const mp = searchParams.get("mp");
-    if (!mp) return;
+    if (!mp || mpQueryHandledRef.current) return;
+    mpQueryHandledRef.current = true;
+
     const msg = MP_FEEDBACK[mp];
     if (msg) {
       setFeedback(msg);
     }
     if (mp === "conectado") {
-      carregarIntegracao();
+      carregarIntegracao({ silent: true });
     }
     router.replace("/gestao/configuracoes", { scroll: false });
   }, [searchParams, router, carregarIntegracao]);
@@ -132,7 +144,7 @@ export default function SecaoMercadoPagoGestao({ onIntegracaoChange }) {
       alert(result.error);
       return;
     }
-    await carregarIntegracao();
+    await carregarIntegracao({ silent: true });
     setFeedback({
       type: "success",
       text: "Mercado Pago desconectado.",
