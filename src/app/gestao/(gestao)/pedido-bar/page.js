@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -16,6 +16,7 @@ import Toast from "@/components/ui/Toast";
 import ResumoPedido from "@/components/cart/ResumoPedido";
 import FloatingCartButton from "@/components/cart/FloatingCartButton";
 import ModalDadosCompradorPrepago from "@/components/prepago/ModalDadosCompradorPrepago";
+import ModalPagamentoPix from "@/components/prepago/ModalPagamentoPix";
 
 export default function PedidoBarPage() {
   const router = useRouter();
@@ -30,6 +31,8 @@ export default function PedidoBarPage() {
   const [modalCompradorAberto, setModalCompradorAberto] = useState(false);
   const [enviandoPrepago, setEnviandoPrepago] = useState(false);
   const [erroApiPrepago, setErroApiPrepago] = useState("");
+  const [modalPixAberto, setModalPixAberto] = useState(false);
+  const [ctxPix, setCtxPix] = useState(null);
 
   const carregar = async () => {
     const token = localStorage.getItem("authToken");
@@ -75,6 +78,10 @@ export default function PedidoBarPage() {
   const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
   const foraDoHorario =
     isModoPrePago(restaurante) && restaurante?.aceita_pedidos_agora === false;
+  const prepagoPodePagar =
+    isModoPrePago(restaurante) && restaurante?.prepago_pagamento_configurado === true;
+  const prepagoSemConfigPagamento =
+    isModoPrePago(restaurante) && restaurante?.prepago_pagamento_configurado !== true;
 
   const handleAdicionarAoCarrinho = (itemParaAdicionar) => {
     const idOpcoes = (itemParaAdicionar.gruposSelecionados || []).flatMap((g) =>
@@ -129,10 +136,31 @@ export default function PedidoBarPage() {
       alert("Fora do horário de pedidos.");
       return;
     }
+    if (!prepagoPodePagar) {
+      setToastState({
+        show: true,
+        message:
+          "Pagamentos não estão configurados para este estabelecimento. Conclua a integração Mercado Pago no admin.",
+      });
+      return;
+    }
     setIsCarrinhoOpen(false);
     setErroApiPrepago("");
     setModalCompradorAberto(true);
   };
+
+  const handlePixPagamentoAprovado = useCallback(
+    ({ codigo_retirada, nome }) => {
+      setModalPixAberto(false);
+      setCtxPix(null);
+      setCarrinho([]);
+      const q = new URLSearchParams();
+      if (codigo_retirada) q.set("codigo", codigo_retirada);
+      if (nome) q.set("nome", nome);
+      router.push(`/cardapio/${slug}/pedido-realizado?${q.toString()}`);
+    },
+    [slug, router]
+  );
 
   const handleModalCompradorConfirmar = async (nome, telefone) => {
     if (!token || !slug) return;
@@ -149,12 +177,14 @@ export default function PedidoBarPage() {
       return;
     }
     setModalCompradorAberto(false);
-    setCarrinho([]);
-    const codigo = result.codigo_retirada || "";
-    const q = new URLSearchParams();
-    if (codigo) q.set("codigo", codigo);
-    if (nome) q.set("nome", nome);
-    router.push(`/cardapio/${slug}/pedido-realizado?${q.toString()}`);
+    setCtxPix({
+      pedidoId: result.id,
+      publicToken: result.public_token,
+      pixCopiaCola: result.pix_copia_cola || "",
+      valorCobrancaPix: result.valor_cobranca_pix,
+      nome,
+    });
+    setModalPixAberto(true);
   };
 
   if (isLoading) return <p className="p-6 text-center">A carregar...</p>;
@@ -170,6 +200,12 @@ export default function PedidoBarPage() {
         {foraDoHorario && (
           <p className="mt-2 text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
             Fora do horário de pedidos configurado para este restaurante.
+          </p>
+        )}
+        {prepagoSemConfigPagamento && (
+          <p className="mt-2 text-red-800 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm">
+            Mercado Pago não está configurado ou habilitado. Não é possível criar pedidos até
+            concluir a integração no Django admin.
           </p>
         )}
       </div>
@@ -201,6 +237,20 @@ export default function PedidoBarPage() {
         onConfirmar={handleModalCompradorConfirmar}
       />
 
+      {ctxPix && (
+        <ModalPagamentoPix
+          open={modalPixAberto}
+          onClose={() => setModalPixAberto(false)}
+          pedidoId={ctxPix.pedidoId}
+          publicToken={ctxPix.publicToken}
+          pixCopiaCola={ctxPix.pixCopiaCola}
+          valorCobrancaPix={ctxPix.valorCobrancaPix}
+          corPrincipal={restaurante?.cor_principal || "#4F46E5"}
+          nomeComprador={ctxPix.nome}
+          onPagamentoAprovado={handlePixPagamentoAprovado}
+        />
+      )}
+
       {isCarrinhoOpen && (
         <ResumoPedido
           itensDoCarrinho={carrinho}
@@ -211,7 +261,7 @@ export default function PedidoBarPage() {
           onDiminuirQtde={(item) => handleAlterarQuantidade(item, -1)}
           onRemoverItem={handleRemoverItem}
           textoBotaoPrincipal="Confirmar pedido"
-          confirmarDesabilitado={foraDoHorario}
+          confirmarDesabilitado={foraDoHorario || !prepagoPodePagar}
         />
       )}
 

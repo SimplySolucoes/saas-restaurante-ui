@@ -76,6 +76,24 @@ export async function createPedidoPrePago(
   return data;
 }
 
+/**
+ * Consulta status do pagamento PIX (público; requer token opaco do pedido).
+ */
+export async function getPrepagoPagamentoStatus(pedidoId, publicToken) {
+  const url = new URL(
+    `${API_URL}/prepago-pedidos/${pedidoId}/status-pagamento/`
+  );
+  url.searchParams.set("token", publicToken);
+  const response = await fetch(url.toString());
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return {
+      error: data.detail || "Não foi possível consultar o pagamento.",
+    };
+  }
+  return data;
+}
+
 export async function listPedidosPrePago(token) {
   if (!token) return [];
   const response = await fetch(`${API_URL}/prepago-pedidos/`, {

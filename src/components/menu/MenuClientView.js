@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import MenuItemCard from "./MenuItemCard";
@@ -12,11 +12,16 @@ import { isModoPrePago } from "@/lib/gestaoNav";
 import Toast from "@/components/ui/Toast";
 import ModalSelecaoOpcoes from "@/components/ui/ModalSelecaoOpcoes";
 import ModalDadosCompradorPrepago from "@/components/prepago/ModalDadosCompradorPrepago";
+import ModalPagamentoPix from "@/components/prepago/ModalPagamentoPix";
 
 export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const router = useRouter();
   const { restaurante, categorias, itens } = initialData;
   const prepago = isModoPrePago(restaurante);
+  const prepagoPodePagar =
+    prepago && restaurante.prepago_pagamento_configurado === true;
+  const prepagoSemConfigPagamento =
+    prepago && restaurante.prepago_pagamento_configurado !== true;
   const pedidosForaDoHorario =
     prepago && restaurante.aceita_pedidos_agora === false;
 
@@ -31,6 +36,8 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toastState, setToastState] = useState({ show: false, message: '', type: 'success' });
+  const [modalPixAberto, setModalPixAberto] = useState(false);
+  const [ctxPix, setCtxPix] = useState(null);
 
   const cartKey = `carrinho_${slug}_${numeroMesa}`;
   const sessionKey = `sessao_${slug}_${numeroMesa}`;
@@ -146,6 +153,15 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
         });
         return;
       }
+      if (!prepagoPodePagar) {
+        setToastState({
+          show: true,
+          message:
+            "Pagamentos não estão configurados para este estabelecimento. Tente mais tarde.",
+          type: "error",
+        });
+        return;
+      }
       setIsCarrinhoOpen(false);
       setErroApiPrepago("");
       setModalCompradorAberto(true);
@@ -153,6 +169,20 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     }
     await handleSubmitOrderMesa();
   };
+
+  const handlePixPagamentoAprovado = useCallback(
+    ({ codigo_retirada, nome }) => {
+      setModalPixAberto(false);
+      setCtxPix(null);
+      setCarrinho([]);
+      localStorage.removeItem(cartKey);
+      const q = new URLSearchParams();
+      if (codigo_retirada) q.set("codigo", codigo_retirada);
+      if (nome) q.set("nome", nome);
+      router.push(`/cardapio/${slug}/pedido-realizado?${q.toString()}`);
+    },
+    [slug, router, cartKey]
+  );
 
   const handleModalCompradorConfirmar = async (nome, telefone) => {
     setEnviandoPrepago(true);
@@ -168,13 +198,14 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       return;
     }
     setModalCompradorAberto(false);
-    setCarrinho([]);
-    localStorage.removeItem(cartKey);
-    const codigo = result.codigo_retirada || "";
-    const q = new URLSearchParams();
-    if (codigo) q.set("codigo", codigo);
-    if (nome) q.set("nome", nome);
-    router.push(`/cardapio/${slug}/pedido-realizado?${q.toString()}`);
+    setCtxPix({
+      pedidoId: result.id,
+      publicToken: result.public_token,
+      pixCopiaCola: result.pix_copia_cola || "",
+      valorCobrancaPix: result.valor_cobranca_pix,
+      nome,
+    });
+    setModalPixAberto(true);
   };
 
   const handleSubmitOrderMesa = async () => {
@@ -285,6 +316,12 @@ if (error) {
             Estamos fora do horário de pedidos. Não é possível finalizar o pedido neste momento.
           </div>
         )}
+        {prepagoSemConfigPagamento && (
+          <div className="bg-red-50 text-red-900 text-center text-sm font-medium py-2 px-4 border-b border-red-100">
+            Pagamentos PIX não estão disponíveis neste momento. O estabelecimento precisa
+            concluir a configuração do Mercado Pago.
+          </div>
+        )}
       </div>
 
       <main className="p-4 md:p-8 pb-24">
@@ -332,6 +369,20 @@ if (error) {
         onConfirmar={handleModalCompradorConfirmar}
       />
 
+      {ctxPix && (
+        <ModalPagamentoPix
+          open={modalPixAberto}
+          onClose={() => setModalPixAberto(false)}
+          pedidoId={ctxPix.pedidoId}
+          publicToken={ctxPix.publicToken}
+          pixCopiaCola={ctxPix.pixCopiaCola}
+          valorCobrancaPix={ctxPix.valorCobrancaPix}
+          corPrincipal={restaurante.cor_principal}
+          nomeComprador={ctxPix.nome}
+          onPagamentoAprovado={handlePixPagamentoAprovado}
+        />
+      )}
+
       {itemParaOpcoes && (
         <ModalSelecaoOpcoes
           item={itemParaOpcoes}
@@ -354,7 +405,9 @@ if (error) {
           onDiminuirQtde={(item) => handleAlterarQuantidade(item, -1)}
           onRemoverItem={handleRemoverItem}
           textoBotaoPrincipal={prepago ? "Confirmar pedido" : "Enviar Pedido"}
-          confirmarDesabilitado={pedidosForaDoHorario}
+          confirmarDesabilitado={
+            pedidosForaDoHorario || (prepago && !prepagoPodePagar)
+          }
         />
       )}
       
