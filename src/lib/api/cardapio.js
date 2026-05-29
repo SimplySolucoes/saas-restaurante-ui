@@ -1,10 +1,10 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api";
+import { getApiUrl } from "./config";
 
 // --- Gestão de Categorias ---
 export async function getGestaoCategorias(token) {
   if (!token) return [];
   try {
-    const response = await fetch(`${API_URL}/categorias/`, {
+    const response = await fetch(`${getApiUrl()}/categorias/`, {
       headers: { 'Authorization': `Token ${token}` },
     });
     if (!response.ok) throw new Error('Falha ao buscar categorias.');
@@ -19,7 +19,7 @@ export async function createCategory(token, categoryData) {
   if (!token) return { error: "Token de autenticação em falta." };
 
   try {
-    const response = await fetch(`${API_URL}/categorias/`, {
+    const response = await fetch(`${getApiUrl()}/categorias/`, {
       method: 'POST',
       headers: {
         'Authorization': `Token ${token}`,
@@ -43,7 +43,7 @@ export async function updateCategory(token, categoryId, categoryData) {
   if (!token) return { error: "Token de autenticação em falta." };
 
   try {
-    const response = await fetch(`${API_URL}/categorias/${categoryId}/`, {
+    const response = await fetch(`${getApiUrl()}/categorias/${categoryId}/`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Token ${token}`,
@@ -67,7 +67,7 @@ export async function deleteCategory(token, categoryId) {
   if (!token) return { error: "Token de autenticação em falta." };
 
   try {
-    const response = await fetch(`${API_URL}/categorias/${categoryId}/`, {
+    const response = await fetch(`${getApiUrl()}/categorias/${categoryId}/`, {
       method: 'DELETE',
       headers: { 'Authorization': `Token ${token}` },
     });
@@ -87,7 +87,7 @@ export async function deleteCategory(token, categoryId) {
 export async function getGestaoItensCardapio(token) {
   if (!token) return [];
   try {
-    const response = await fetch(`${API_URL}/itens-cardapio/`, {
+    const response = await fetch(`${getApiUrl()}/itens-cardapio/`, {
       headers: { 'Authorization': `Token ${token}` },
     });
     if (!response.ok) throw new Error('Falha ao buscar itens do cardápio.');
@@ -102,7 +102,7 @@ export async function createMenuItem(token, formData) {
   if (!token) return { error: "Token de autenticação em falta." };
 
   try {
-    const response = await fetch(`${API_URL}/itens-cardapio/`, {
+    const response = await fetch(`${getApiUrl()}/itens-cardapio/`, {
       method: 'POST',
       headers: {
         'Authorization': `Token ${token}`,
@@ -128,7 +128,7 @@ export async function updateMenuItem(token, itemId, formData) {
   if (!token) return { error: "Token de autenticação em falta." };
 
   try {
-    const response = await fetch(`${API_URL}/itens-cardapio/${itemId}/`, {
+    const response = await fetch(`${getApiUrl()}/itens-cardapio/${itemId}/`, {
       method: 'PATCH', 
       headers: {
         'Authorization': `Token ${token}`,
@@ -152,7 +152,7 @@ export async function deleteMenuItem(token, itemId) {
   if (!token) return { error: "Token de autenticação em falta." };
 
   try {
-    const response = await fetch(`${API_URL}/itens-cardapio/${itemId}/`, {
+    const response = await fetch(`${getApiUrl()}/itens-cardapio/${itemId}/`, {
       method: 'DELETE',
       headers: { 'Authorization': `Token ${token}` },
     });
@@ -171,7 +171,7 @@ export async function toggleItemDisponibilidade(token, itemId, data) {
   if (!token) return { error: "Token de autenticação em falta." };
 
   try {
-    const response = await fetch(`${API_URL}/itens-cardapio/${itemId}/`, {
+    const response = await fetch(`${getApiUrl()}/itens-cardapio/${itemId}/`, {
       method: 'PATCH', 
       headers: {
         'Authorization': `Token ${token}`,
@@ -229,7 +229,7 @@ export async function getGruposOpcao(token, itemId) {
   }
 
   try {
-    const response = await fetch(`${API_URL}/itens-cardapio/${itemId}/grupos-opcao/`, {
+    const response = await fetch(`${getApiUrl()}/itens-cardapio/${itemId}/grupos-opcao/`, {
       headers: headers,
       cache: 'no-store',
     });
@@ -244,7 +244,7 @@ export async function getGruposOpcao(token, itemId) {
 export async function createGrupoOpcao(token, itemId, grupoData) {
   if (!token) return { error: "Token em falta." };
   try {
-    const response = await fetch(`${API_URL}/itens-cardapio/${itemId}/grupos-opcao/`, {
+    const response = await fetch(`${getApiUrl()}/itens-cardapio/${itemId}/grupos-opcao/`, {
       method: 'POST',
       headers: {
         'Authorization': `Token ${token}`,
@@ -263,7 +263,7 @@ export async function createGrupoOpcao(token, itemId, grupoData) {
 export async function updateGrupoOpcao(token, grupoId, grupoData) {
   if (!token) return { error: "Token em falta." };
   try {
-    const response = await fetch(`${API_URL}/grupos-opcao/${grupoId}/`, {
+    const response = await fetch(`${getApiUrl()}/grupos-opcao/${grupoId}/`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Token ${token}`,
@@ -282,7 +282,7 @@ export async function updateGrupoOpcao(token, grupoId, grupoData) {
 export async function deleteGrupoOpcao(token, grupoId) {
     if (!token) return { error: "Token em falta." };
     try {
-        const response = await fetch(`${API_URL}/grupos-opcao/${grupoId}/`, {
+        const response = await fetch(`${getApiUrl()}/grupos-opcao/${grupoId}/`, {
             method: 'DELETE',
             headers: { 'Authorization': `Token ${token}` },
         });
@@ -305,7 +305,7 @@ export async function deleteGrupoOpcao(token, grupoId) {
 export async function createItemOpcao(token, grupoId, itemData) {
   if (!token) return { error: "Token em falta." };
   try {
-    const response = await fetch(`${API_URL}/grupos-opcao/${grupoId}/itens-opcao/`, {
+    const response = await fetch(`${getApiUrl()}/grupos-opcao/${grupoId}/itens-opcao/`, {
       method: 'POST',
       headers: {
         'Authorization': `Token ${token}`,
@@ -324,7 +324,7 @@ export async function createItemOpcao(token, grupoId, itemData) {
 export async function updateItemOpcao(token, itemId, itemData) {
     if (!token) return { error: "Token em falta." };
     try {
-        const response = await fetch(`${API_URL}/itens-opcao/${itemId}/`, {
+        const response = await fetch(`${getApiUrl()}/itens-opcao/${itemId}/`, {
             method: 'PATCH',
             headers: {
                 'Authorization': `Token ${token}`,
@@ -343,7 +343,7 @@ export async function updateItemOpcao(token, itemId, itemData) {
 export async function deleteItemOpcao(token, itemId) {
     if (!token) return { error: "Token em falta." };
     try {
-        const response = await fetch(`${API_URL}/itens-opcao/${itemId}/`, {
+        const response = await fetch(`${getApiUrl()}/itens-opcao/${itemId}/`, {
             method: 'DELETE',
             headers: { 'Authorization': `Token ${token}` },
         });

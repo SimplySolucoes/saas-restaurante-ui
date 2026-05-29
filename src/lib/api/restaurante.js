@@ -1,10 +1,10 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api";
+import { getApiUrl } from "./config";
 
 // --- Gestão do Restaurante ---
 export async function getRestaurante(token) {
   if (!token) return null;
   try {
-    const response = await fetch(`${API_URL}/restaurantes/meu/`, {
+    const response = await fetch(`${getApiUrl()}/restaurantes/meu/`, {
       method: 'GET',
       headers: {
         'Authorization': `Token ${token}`,
@@ -25,7 +25,7 @@ export async function baixarQrcodeCardapioPublico(token) {
   if (!token) return { error: 'Token em falta.' };
   try {
     const response = await fetch(
-      `${API_URL}/restaurantes/meu/baixar-qrcode-cardapio-publico/`,
+      `${getApiUrl()}/restaurantes/meu/baixar-qrcode-cardapio-publico/`,
       { headers: { Authorization: `Token ${token}` } }
     );
     if (!response.ok) {
@@ -55,7 +55,7 @@ export async function updateRestaurante(token, restauranteData) {
       }
     }
 
-    const response = await fetch(`${API_URL}/restaurantes/meu/`, {
+    const response = await fetch(`${getApiUrl()}/restaurantes/meu/`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Token ${token}`,
@@ -80,7 +80,7 @@ export async function updateRestaurante(token, restauranteData) {
 export async function getMesas(token) {
   if (!token) return [];
   try {
-    const response = await fetch(`${API_URL}/mesas/`, {
+    const response = await fetch(`${getApiUrl()}/mesas/`, {
       headers: { 'Authorization': `Token ${token}` },
     });
     if (!response.ok) throw new Error('Falha ao buscar mesas.');
@@ -94,7 +94,7 @@ export async function getMesas(token) {
 export async function getUrlSeguraMesa(token, mesaId) {
   if (!token) return { error: "Token em falta." };
   try {
-    const response = await fetch(`${API_URL}/mesas/${mesaId}/url-segura/`, {
+    const response = await fetch(`${getApiUrl()}/mesas/${mesaId}/url-segura/`, {
       headers: { 'Authorization': `Token ${token}` },
     });
     if (!response.ok) throw new Error('Falha ao buscar URL segura.');

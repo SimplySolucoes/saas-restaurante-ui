@@ -1,9 +1,9 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api";
+import { getApiUrl } from "./config";
 
 // --- Cardápio Público (Cliente) ---
 export async function getPublicCardapioData(slug) {
   try {
-    const response = await fetch(`${API_URL}/cardapio/${slug}/`);
+    const response = await fetch(`${getApiUrl()}/cardapio/${slug}/`);
     if (!response.ok) {
       if (response.status === 404) return null;
       throw new Error('Falha ao buscar os dados do cardápio.');
@@ -17,7 +17,7 @@ export async function getPublicCardapioData(slug) {
 
 export async function getBrandingBySlug(slug) {
   try {
-    const response = await fetch(`${API_URL}/branding/${slug}/`, {
+    const response = await fetch(`${getApiUrl()}/branding/${slug}/`, {
       cache: "no-store"
     });
 
@@ -34,7 +34,7 @@ export async function getBrandingBySlug(slug) {
 
 export async function createSessionByNumber(slug, numeroMesa, segredo) {
   try {
-    const response = await fetch(`${API_URL}/sessoes/iniciar/`, {
+    const response = await fetch(`${getApiUrl()}/sessoes/iniciar/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -54,7 +54,7 @@ export async function createSessionByNumber(slug, numeroMesa, segredo) {
 // --- Funções antigas (podem ser úteis ou removidas) ---
 export async function getRestauranteData(restauranteId) {
   try {
-    const response = await fetch(`${API_URL}/restaurantes/${restauranteId}/`);
+    const response = await fetch(`${getApiUrl()}/restaurantes/${restauranteId}/`);
     if (!response.ok) throw new Error('Restaurante não encontrado.');
     return await response.json();
   } catch (error) {
@@ -65,7 +65,7 @@ export async function getRestauranteData(restauranteId) {
 
 export async function getCategorias(restauranteId) {
   try {
-    const response = await fetch(`${API_URL}/categorias/?restaurante=${restauranteId}`);
+    const response = await fetch(`${getApiUrl()}/categorias/?restaurante=${restauranteId}`);
     if (!response.ok) throw new Error('Falha ao buscar categorias.');
     return await response.json();
   } catch (error) {
@@ -76,7 +76,7 @@ export async function getCategorias(restauranteId) {
 
 export async function getItensCardapio(restauranteId) {
   try {
-    const response = await fetch(`${API_URL}/itens-cardapio/?restaurante=${restauranteId}`);
+    const response = await fetch(`${getApiUrl()}/itens-cardapio/?restaurante=${restauranteId}`);
     if (!response.ok) throw new Error('Falha ao buscar itens do cardápio.');
     return await response.json();
   } catch (error) {

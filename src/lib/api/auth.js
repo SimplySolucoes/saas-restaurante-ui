@@ -1,9 +1,9 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api";
+import { getApiUrl } from "./config";
 
 export async function loginUser(credentials) {
   try {
     // Aponta para o novo endpoint de login no app 'accounts'
-    const response = await fetch(`${API_URL}/accounts/login/`, {
+    const response = await fetch(`${getApiUrl()}/accounts/login/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),

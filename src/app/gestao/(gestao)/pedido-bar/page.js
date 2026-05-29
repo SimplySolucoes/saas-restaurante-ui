@@ -17,6 +17,9 @@ import ResumoPedido from "@/components/cart/ResumoPedido";
 import FloatingCartButton from "@/components/cart/FloatingCartButton";
 import ModalDadosCompradorPrepago from "@/components/prepago/ModalDadosCompradorPrepago";
 import ModalPagamentoPix from "@/components/prepago/ModalPagamentoPix";
+import ModalEscolhaPagamentoPrepago from "@/components/prepago/ModalEscolhaPagamentoPrepago";
+import ModalCheckoutCarteira from "@/components/prepago/ModalCheckoutCarteira";
+import useCarteiraDigitalDisponivel from "@/hooks/useCarteiraDigitalDisponivel";
 
 export default function PedidoBarPage() {
   const router = useRouter();
@@ -33,6 +36,10 @@ export default function PedidoBarPage() {
   const [erroApiPrepago, setErroApiPrepago] = useState("");
   const [modalPixAberto, setModalPixAberto] = useState(false);
   const [ctxPix, setCtxPix] = useState(null);
+  const [modalEscolhaPagamentoAberto, setModalEscolhaPagamentoAberto] = useState(false);
+  const [modalCarteiraAberto, setModalCarteiraAberto] = useState(false);
+  const [ctxCarteira, setCtxCarteira] = useState(null);
+  const [dadosCompradorPendentes, setDadosCompradorPendentes] = useState(null);
 
   const carregar = async () => {
     const token = localStorage.getItem("authToken");
@@ -82,6 +89,13 @@ export default function PedidoBarPage() {
     isModoPrePago(restaurante) && restaurante?.prepago_pagamento_configurado === true;
   const prepagoSemConfigPagamento =
     isModoPrePago(restaurante) && restaurante?.prepago_pagamento_configurado !== true;
+
+  const {
+    disponivel: carteiraDisponivel,
+    carregando: carteiraCarregando,
+    labelCarteira,
+    mpPublicKey: mpPublicKeyHook,
+  } = useCarteiraDigitalDisponivel(slug, Boolean(slug && prepagoPodePagar));
 
   const handleAdicionarAoCarrinho = (itemParaAdicionar) => {
     const idOpcoes = (itemParaAdicionar.gruposSelecionados || []).flatMap((g) =>
@@ -162,30 +176,82 @@ export default function PedidoBarPage() {
     [slug, router]
   );
 
-  const handleModalCompradorConfirmar = async (nome, telefone) => {
-    if (!token || !slug) return;
+  const criarPedidoPrepago = async (nome, telefone, metodoPagamento) => {
+    if (!token || !slug) return null;
     setEnviandoPrepago(true);
     setErroApiPrepago("");
     const result = await createPedidoPrePago(slug, carrinho, token, {
       observacoesGerais: "",
       compradorNome: nome,
       compradorTelefone: telefone,
+      metodoPagamento,
     });
     setEnviandoPrepago(false);
     if (result?.error) {
       setErroApiPrepago(result.error);
+      return null;
+    }
+    return result;
+  };
+
+  const handleModalCompradorConfirmar = async (nome, telefone) => {
+    if (!token || !slug) return;
+    setModalCompradorAberto(false);
+    setErroApiPrepago("");
+    setDadosCompradorPendentes({ nome, telefone });
+    setModalEscolhaPagamentoAberto(true);
+  };
+
+  const handleEscolherPix = async () => {
+    const { nome, telefone } = dadosCompradorPendentes || {};
+    if (!nome || !token || !slug) return;
+    const result = await criarPedidoPrepago(nome, telefone, "pix");
+    if (!result) {
+      setModalEscolhaPagamentoAberto(true);
       return;
     }
-    setModalCompradorAberto(false);
+    setModalEscolhaPagamentoAberto(false);
     setCtxPix({
       pedidoId: result.id,
       publicToken: result.public_token,
       pixCopiaCola: result.pix_copia_cola || "",
-      valorCobrancaPix: result.valor_cobranca_pix,
+      valorCobrancaPix: result.valor_cobranca_pix || result.valor_cobranca,
       nome,
     });
     setModalPixAberto(true);
+    setDadosCompradorPendentes(null);
   };
+
+  const handleEscolherCarteira = async () => {
+    if (!carteiraDisponivel) return;
+    setModalEscolhaPagamentoAberto(false);
+    const { nome, telefone } = dadosCompradorPendentes || {};
+    if (!nome || !token || !slug) return;
+    const result = await criarPedidoPrepago(nome, telefone, "carteira");
+    if (!result) {
+      setModalEscolhaPagamentoAberto(true);
+      return;
+    }
+    setModalEscolhaPagamentoAberto(false);
+    setCtxCarteira({
+      pedidoId: result.id,
+      publicToken: result.public_token,
+      mpPublicKey: result.mp_public_key || mpPublicKeyHook,
+      valorCobranca: result.valor_cobranca || result.valor_cobranca_pix,
+      nome,
+    });
+    setModalCarteiraAberto(true);
+    setDadosCompradorPendentes(null);
+  };
+
+  const handleCarteiraPagamentoAprovado = useCallback(
+    ({ codigo_retirada, nome }) => {
+      setModalCarteiraAberto(false);
+      setCtxCarteira(null);
+      handlePixPagamentoAprovado({ codigo_retirada, nome });
+    },
+    [handlePixPagamentoAprovado]
+  );
 
   if (isLoading) return <p className="p-6 text-center">A carregar...</p>;
   if (error) return <p className="p-6 text-center text-red-500">{error}</p>;
@@ -236,6 +302,40 @@ export default function PedidoBarPage() {
         apiError={erroApiPrepago}
         onConfirmar={handleModalCompradorConfirmar}
       />
+
+      <ModalEscolhaPagamentoPrepago
+        open={modalEscolhaPagamentoAberto}
+        onClose={() => {
+          setModalEscolhaPagamentoAberto(false);
+          setDadosCompradorPendentes(null);
+          setModalCompradorAberto(true);
+        }}
+        onEscolherPix={handleEscolherPix}
+        onEscolherCarteira={handleEscolherCarteira}
+        mostrarCarteira={carteiraDisponivel && !carteiraCarregando}
+        labelCarteira={labelCarteira}
+        corPrincipal={restaurante?.cor_principal || "#4F46E5"}
+        loadingPix={enviandoPrepago}
+        apiError={erroApiPrepago}
+      />
+
+      {ctxCarteira && (
+        <ModalCheckoutCarteira
+          open={modalCarteiraAberto}
+          onClose={() => {
+            setModalCarteiraAberto(false);
+            setCtxCarteira(null);
+          }}
+          mpPublicKey={ctxCarteira.mpPublicKey}
+          valorCobranca={ctxCarteira.valorCobranca}
+          pedidoId={ctxCarteira.pedidoId}
+          publicToken={ctxCarteira.publicToken}
+          nomeComprador={ctxCarteira.nome}
+          carteiraDisponivel={carteiraDisponivel}
+          onAprovado={handleCarteiraPagamentoAprovado}
+          onErro={(msg) => setToastState({ show: true, message: msg })}
+        />
+      )}
 
       {ctxPix && (
         <ModalPagamentoPix

@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api";
+import { getApiUrl } from "./config";
 
 function formatItensFromCart(cartItems) {
   return cartItems.map((item) => {
@@ -20,6 +20,7 @@ function normalizeCreateOpts(optsOrString) {
       observacoesGerais: optsOrString || "",
       compradorNome: undefined,
       compradorTelefone: undefined,
+      metodoPagamento: "pix",
     };
   }
   const o = optsOrString || {};
@@ -27,6 +28,7 @@ function normalizeCreateOpts(optsOrString) {
     observacoesGerais: o.observacoesGerais ?? "",
     compradorNome: o.compradorNome,
     compradorTelefone: o.compradorTelefone,
+    metodoPagamento: o.metodoPagamento ?? "pix",
   };
 }
 
@@ -43,7 +45,7 @@ export async function createPedidoPrePago(
   token = null,
   opts = ""
 ) {
-  const { observacoesGerais, compradorNome, compradorTelefone } =
+  const { observacoesGerais, compradorNome, compradorTelefone, metodoPagamento } =
     normalizeCreateOpts(opts);
 
   const headers = { "Content-Type": "application/json" };
@@ -52,12 +54,13 @@ export async function createPedidoPrePago(
   }
   const payload = {
     restaurante_slug: restauranteSlug,
+    metodo_pagamento: metodoPagamento,
     observacoes_gerais: observacoesGerais || "",
     comprador_nome: compradorNome,
     comprador_telefone: compradorTelefone,
     itens: formatItensFromCart(cartItems),
   };
-  const response = await fetch(`${API_URL}/prepago-pedidos/`, {
+  const response = await fetch(`${getApiUrl()}/prepago-pedidos/`, {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
@@ -81,7 +84,7 @@ export async function createPedidoPrePago(
  */
 export async function getPrepagoPagamentoStatus(pedidoId, publicToken) {
   const url = new URL(
-    `${API_URL}/prepago-pedidos/${pedidoId}/status-pagamento/`
+    `${getApiUrl()}/prepago-pedidos/${pedidoId}/status-pagamento/`
   );
   url.searchParams.set("token", publicToken);
   const response = await fetch(url.toString());
@@ -96,7 +99,7 @@ export async function getPrepagoPagamentoStatus(pedidoId, publicToken) {
 
 export async function listPedidosPrePago(token) {
   if (!token) return [];
-  const response = await fetch(`${API_URL}/prepago-pedidos/`, {
+  const response = await fetch(`${getApiUrl()}/prepago-pedidos/`, {
     headers: { Authorization: `Token ${token}` },
   });
   if (!response.ok) return [];
@@ -105,7 +108,7 @@ export async function listPedidosPrePago(token) {
 
 export async function patchPedidoPrePagoRetirado(token, pedidoId, retirado) {
   if (!token || !pedidoId) return { error: "Dados em falta." };
-  const response = await fetch(`${API_URL}/prepago-pedidos/${pedidoId}/`, {
+  const response = await fetch(`${getApiUrl()}/prepago-pedidos/${pedidoId}/`, {
     method: "PATCH",
     headers: {
       Authorization: `Token ${token}`,

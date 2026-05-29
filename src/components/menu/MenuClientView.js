@@ -13,6 +13,9 @@ import Toast from "@/components/ui/Toast";
 import ModalSelecaoOpcoes from "@/components/ui/ModalSelecaoOpcoes";
 import ModalDadosCompradorPrepago from "@/components/prepago/ModalDadosCompradorPrepago";
 import ModalPagamentoPix from "@/components/prepago/ModalPagamentoPix";
+import ModalEscolhaPagamentoPrepago from "@/components/prepago/ModalEscolhaPagamentoPrepago";
+import ModalCheckoutCarteira from "@/components/prepago/ModalCheckoutCarteira";
+import useCarteiraDigitalDisponivel from "@/hooks/useCarteiraDigitalDisponivel";
 
 export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const router = useRouter();
@@ -38,6 +41,17 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const [toastState, setToastState] = useState({ show: false, message: '', type: 'success' });
   const [modalPixAberto, setModalPixAberto] = useState(false);
   const [ctxPix, setCtxPix] = useState(null);
+  const [modalEscolhaPagamentoAberto, setModalEscolhaPagamentoAberto] = useState(false);
+  const [modalCarteiraAberto, setModalCarteiraAberto] = useState(false);
+  const [ctxCarteira, setCtxCarteira] = useState(null);
+  const [dadosCompradorPendentes, setDadosCompradorPendentes] = useState(null);
+
+  const {
+    disponivel: carteiraDisponivel,
+    carregando: carteiraCarregando,
+    labelCarteira,
+    mpPublicKey: mpPublicKeyHook,
+  } = useCarteiraDigitalDisponivel(slug, prepago && prepagoPodePagar);
 
   const cartKey = `carrinho_${slug}_${numeroMesa}`;
   const sessionKey = `sessao_${slug}_${numeroMesa}`;
@@ -184,29 +198,80 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     [slug, router, cartKey]
   );
 
-  const handleModalCompradorConfirmar = async (nome, telefone) => {
+  const criarPedidoPrepago = async (nome, telefone, metodoPagamento) => {
     setEnviandoPrepago(true);
     setErroApiPrepago("");
     const result = await createPedidoPrePago(slug, carrinho, null, {
       observacoesGerais: "",
       compradorNome: nome,
       compradorTelefone: telefone,
+      metodoPagamento,
     });
     setEnviandoPrepago(false);
     if (result?.error) {
       setErroApiPrepago(result.error);
+      return null;
+    }
+    return result;
+  };
+
+  const handleModalCompradorConfirmar = async (nome, telefone) => {
+    setModalCompradorAberto(false);
+    setErroApiPrepago("");
+    setDadosCompradorPendentes({ nome, telefone });
+    setModalEscolhaPagamentoAberto(true);
+  };
+
+  const handleEscolherPix = async () => {
+    const { nome, telefone } = dadosCompradorPendentes || {};
+    if (!nome) return;
+    const result = await criarPedidoPrepago(nome, telefone, "pix");
+    if (!result) {
+      setModalEscolhaPagamentoAberto(true);
       return;
     }
-    setModalCompradorAberto(false);
+    setModalEscolhaPagamentoAberto(false);
     setCtxPix({
       pedidoId: result.id,
       publicToken: result.public_token,
       pixCopiaCola: result.pix_copia_cola || "",
-      valorCobrancaPix: result.valor_cobranca_pix,
+      valorCobrancaPix: result.valor_cobranca_pix || result.valor_cobranca,
       nome,
     });
     setModalPixAberto(true);
+    setDadosCompradorPendentes(null);
   };
+
+  const handleEscolherCarteira = async () => {
+    if (!carteiraDisponivel) return;
+    setModalEscolhaPagamentoAberto(false);
+    const { nome, telefone } = dadosCompradorPendentes || {};
+    if (!nome) return;
+    const result = await criarPedidoPrepago(nome, telefone, "carteira");
+    if (!result) {
+      setModalEscolhaPagamentoAberto(true);
+      return;
+    }
+    setModalEscolhaPagamentoAberto(false);
+    setCtxCarteira({
+      pedidoId: result.id,
+      publicToken: result.public_token,
+      mpPublicKey: result.mp_public_key || mpPublicKeyHook,
+      valorCobranca: result.valor_cobranca || result.valor_cobranca_pix,
+      nome,
+    });
+    setModalCarteiraAberto(true);
+    setDadosCompradorPendentes(null);
+  };
+
+  const handleCarteiraPagamentoAprovado = useCallback(
+    ({ codigo_retirada, nome }) => {
+      setModalCarteiraAberto(false);
+      setCtxCarteira(null);
+      handlePixPagamentoAprovado({ codigo_retirada, nome });
+    },
+    [handlePixPagamentoAprovado]
+  );
 
   const handleSubmitOrderMesa = async () => {
     setIsLoading(true);
@@ -368,6 +433,42 @@ if (error) {
         apiError={erroApiPrepago}
         onConfirmar={handleModalCompradorConfirmar}
       />
+
+      <ModalEscolhaPagamentoPrepago
+        open={modalEscolhaPagamentoAberto}
+        onClose={() => {
+          setModalEscolhaPagamentoAberto(false);
+          setDadosCompradorPendentes(null);
+          setModalCompradorAberto(true);
+        }}
+        onEscolherPix={handleEscolherPix}
+        onEscolherCarteira={handleEscolherCarteira}
+        mostrarCarteira={carteiraDisponivel && !carteiraCarregando}
+        labelCarteira={labelCarteira}
+        corPrincipal={restaurante.cor_principal}
+        loadingPix={enviandoPrepago}
+        apiError={erroApiPrepago}
+      />
+
+      {ctxCarteira && (
+        <ModalCheckoutCarteira
+          open={modalCarteiraAberto}
+          onClose={() => {
+            setModalCarteiraAberto(false);
+            setCtxCarteira(null);
+          }}
+          mpPublicKey={ctxCarteira.mpPublicKey}
+          valorCobranca={ctxCarteira.valorCobranca}
+          pedidoId={ctxCarteira.pedidoId}
+          publicToken={ctxCarteira.publicToken}
+          nomeComprador={ctxCarteira.nome}
+          carteiraDisponivel={carteiraDisponivel}
+          onAprovado={handleCarteiraPagamentoAprovado}
+          onErro={(msg) =>
+            setToastState({ show: true, message: msg, type: "error" })
+          }
+        />
+      )}
 
       {ctxPix && (
         <ModalPagamentoPix
