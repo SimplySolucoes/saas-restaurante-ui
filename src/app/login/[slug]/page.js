@@ -1,7 +1,7 @@
 import { getBrandingBySlug } from "@/lib/api";
 import LoginForm from "@/components/auth/LoginForm";
 import Image from "next/image";
-//teste
+
 export default async function LoginPage({ params }) {
   const { slug } = await params ;  
   
