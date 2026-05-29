@@ -25,6 +25,22 @@ const MP_FEEDBACK = {
     type: "error",
     text: "Não foi possível concluir a conexão. Verifique as credenciais da plataforma e tente de novo.",
   },
+  erro_troca_client: {
+    type: "error",
+    text: "Client ID ou Client Secret inválidos na API. Use o par OAuth em Credenciais de produção no painel MP (não o Access Token de teste). Ative credenciais de produção e atualize a Render.",
+  },
+  erro_troca_grant: {
+    type: "error",
+    text: "Código OAuth inválido ou redirect URI diferente do cadastrado no MP. Confira a URL de callback na app e tente Conectar de novo.",
+  },
+  erro_troca_sem_code: {
+    type: "error",
+    text: "O Mercado Pago voltou sem código de autorização. Revogue o acesso da app na conta vendedor de teste e conecte novamente.",
+  },
+  erro_troca_cripto: {
+    type: "error",
+    text: "Tokens recebidos, mas a API não conseguiu gravá-los. Verifique MERCADOPAGO_TOKEN_ENCRYPTION_KEY na Render.",
+  },
 };
 
 function formatAmbiente(ambiente) {
