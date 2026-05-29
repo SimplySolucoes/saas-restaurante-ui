@@ -11,7 +11,7 @@ import {
 const MP_FEEDBACK = {
   conectado: {
     type: "success",
-    text: "Mercado Pago conectado com sucesso. Pagamentos PIX e carteira digital estão disponíveis.",
+    text: "Mercado Pago conectado com sucesso. Pagamentos PIX e cartão estão disponíveis.",
   },
   oauth_negado: {
     type: "error",
@@ -132,7 +132,7 @@ export default function SecaoMercadoPagoGestao({ onIntegracaoChange }) {
   };
 
   const handleDesconectar = async () => {
-    if (!confirm("Desconectar o Mercado Pago? Os pagamentos PIX e carteira ficarão indisponíveis até reconectar.")) {
+    if (!confirm("Desconectar o Mercado Pago? Os pagamentos PIX e cartão ficarão indisponíveis até reconectar.")) {
       return;
     }
     const token = localStorage.getItem("authToken");
@@ -158,7 +158,7 @@ export default function SecaoMercadoPagoGestao({ onIntegracaoChange }) {
       <div className="pb-4 mb-4 border-b border-gray-300">
         <h2 className="text-xl font-semibold text-gray-700">Pagamentos Mercado Pago</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Conecte a conta do restaurante para receber PIX e pagamentos por carteira digital (Apple Pay / Google Pay).
+          Conecte a conta do restaurante para receber PIX e pagamentos com cartão de crédito ou débito.
         </p>
       </div>
 
@@ -199,7 +199,7 @@ export default function SecaoMercadoPagoGestao({ onIntegracaoChange }) {
               <dd className="text-gray-800">{formatData(integracao.atualizado_em)}</dd>
             </div>
             <div>
-              <dt className="text-gray-500">Public Key (carteira)</dt>
+              <dt className="text-gray-500">Public Key (cartão)</dt>
               <dd className="text-gray-800">
                 {integracao.public_key_configurada ? "Configurada" : "Ausente"}
               </dd>
@@ -223,7 +223,7 @@ export default function SecaoMercadoPagoGestao({ onIntegracaoChange }) {
       ) : (
         <div className="space-y-4">
           <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900">
-            Pagamentos PIX e carteira digital estão indisponíveis até conectar o Mercado Pago.
+            Pagamentos PIX e cartão estão indisponíveis até conectar o Mercado Pago.
           </div>
           <button
             type="button"

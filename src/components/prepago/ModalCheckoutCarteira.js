@@ -7,14 +7,6 @@ import { pagarCarteira } from "@/lib/api/pagamentosPrepago";
 
 const POLL_MS = 4000;
 
-const CARD_CUSTOMIZATION = {
-  paymentMethods: {
-    types: {
-      excluded: ["credit_card", "debit_card", "prepaid_card"],
-    },
-  },
-};
-
 export default function ModalCheckoutCarteira({
   open,
   onClose,
@@ -105,7 +97,7 @@ export default function ModalCheckoutCarteira({
   const handleBrickError = useCallback(() => {
     setBrickErro(true);
     onClose?.();
-    onErro?.("Não foi possível abrir o pagamento por carteira.");
+    onErro?.("Não foi possível abrir o pagamento com cartão.");
   }, [onClose, onErro]);
 
   if (!open || !carteiraDisponivel) return null;
@@ -122,7 +114,7 @@ export default function ModalCheckoutCarteira({
           id="carteira-modal-titulo"
           className="text-lg font-bold text-gray-900"
         >
-          Pagamento
+          Pagamento com cartão
         </h2>
         <p className="mt-1 text-sm text-gray-600">
           Valor:{" "}
@@ -139,7 +131,11 @@ export default function ModalCheckoutCarteira({
           <div className="mt-4 min-h-[120px]">
             <CardPayment
               initialization={{ amount }}
-              customization={CARD_CUSTOMIZATION}
+              customization={{
+                paymentMethods: {
+                  maxInstallments: 1,
+                },
+              }}
               onSubmit={handleSubmit}
               onError={handleBrickError}
             />

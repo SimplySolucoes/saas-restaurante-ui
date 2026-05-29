@@ -6,7 +6,7 @@ export default function ModalEscolhaPagamentoPrepago({
   onEscolherPix,
   onEscolherCarteira,
   mostrarCarteira = false,
-  labelCarteira = "Apple Pay ou Google Pay",
+  labelCarteira = "Pagar com cartão",
   corPrincipal = "#4F46E5",
   loadingPix = false,
   apiError = "",
