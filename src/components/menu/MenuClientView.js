@@ -7,7 +7,7 @@ import MenuItemCard from "./MenuItemCard";
 import FloatingCartButton from "../cart/FloatingCartButton";
 import ResumoPedido from "../cart/ResumoPedido"; 
 import CategoryMenu from "./CategoryMenu";
-import { createSessionByNumber, submitOrder, getSessionStatus, createPedidoPrePago } from "@/lib/api";
+import { createSessionByNumber, submitOrder, getSessionStatus, createPedidoPrePago, resolveValorCobrancaPrepago } from "@/lib/api";
 import { isModoPrePago } from "@/lib/gestaoNav";
 import Toast from "@/components/ui/Toast";
 import ModalSelecaoOpcoes from "@/components/ui/ModalSelecaoOpcoes";
@@ -235,7 +235,7 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       pedidoId: result.id,
       publicToken: result.public_token,
       pixCopiaCola: result.pix_copia_cola || "",
-      valorCobrancaPix: result.valor_cobranca_pix || result.valor_cobranca,
+      valorCobrancaPix: resolveValorCobrancaPrepago(result),
       nome,
     });
     setModalPixAberto(true);
@@ -257,7 +257,7 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       pedidoId: result.id,
       publicToken: result.public_token,
       mpPublicKey: result.mp_public_key || mpPublicKeyHook,
-      valorCobranca: result.valor_cobranca || result.valor_cobranca_pix,
+      valorCobranca: resolveValorCobrancaPrepago(result),
       nome,
     });
     setModalCarteiraAberto(true);

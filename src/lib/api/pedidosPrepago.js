@@ -79,6 +79,17 @@ export async function createPedidoPrePago(
   return data;
 }
 
+/** Valor total a cobrar (pedido + taxa), com fallback legado. */
+export function resolveValorCobrancaPrepago(result) {
+  if (!result) return "0";
+  return (
+    result.valor_cobranca ||
+    result.valor_cobranca_pix ||
+    result.total ||
+    "0"
+  );
+}
+
 /**
  * Consulta status do pagamento PIX (público; requer token opaco do pedido).
  */

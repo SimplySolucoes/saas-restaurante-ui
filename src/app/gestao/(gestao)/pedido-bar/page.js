@@ -8,6 +8,7 @@ import {
   getGestaoCategorias,
   getGestaoItensCardapio,
   createPedidoPrePago,
+  resolveValorCobrancaPrepago,
 } from "@/lib/api";
 import { navFlagsFromRestaurante, isModoPrePago, MODO_OPERACAO } from "@/lib/gestaoNav";
 
@@ -215,7 +216,7 @@ export default function PedidoBarPage() {
       pedidoId: result.id,
       publicToken: result.public_token,
       pixCopiaCola: result.pix_copia_cola || "",
-      valorCobrancaPix: result.valor_cobranca_pix || result.valor_cobranca,
+      valorCobrancaPix: resolveValorCobrancaPrepago(result),
       nome,
     });
     setModalPixAberto(true);
@@ -237,7 +238,7 @@ export default function PedidoBarPage() {
       pedidoId: result.id,
       publicToken: result.public_token,
       mpPublicKey: result.mp_public_key || mpPublicKeyHook,
-      valorCobranca: result.valor_cobranca || result.valor_cobranca_pix,
+      valorCobranca: resolveValorCobrancaPrepago(result),
       nome,
     });
     setModalCarteiraAberto(true);
