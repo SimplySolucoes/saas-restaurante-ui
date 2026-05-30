@@ -8,6 +8,7 @@ import { getPrepagoPagamentoStatus } from "@/lib/api/pedidosPrepago";
 import PrepagoCardapioHeader from "@/components/menu/PrepagoCardapioHeader";
 import { syncPedidosPagosLocal } from "@/lib/prepagoPedidosLocal";
 import {
+  formatarCodigoRetirada,
   formatHoraPedido,
   formatMoeda,
   getEstadoPedidoBadge,
@@ -97,7 +98,7 @@ export default function MeusPedidosPage() {
                             className="font-mono text-lg font-bold"
                             style={{ color: cor }}
                           >
-                            {p.codigoRetirada || "—"}
+                            {p.codigoRetirada ? formatarCodigoRetirada(p.codigoRetirada) : "—"}
                           </p>
                           <p className="mt-1 text-sm text-gray-500">
                             {formatHoraPedido(p.criadoEm)}

@@ -13,6 +13,7 @@ import {
 } from "@/lib/prepagoPedidosLocal";
 import PrepagoResumoValores from "@/components/prepago/PrepagoResumoValores";
 import {
+  formatarCodigoRetirada,
   formatHoraPedido,
   formatMoeda,
   getEstadoPedidoBadge,
@@ -175,7 +176,7 @@ function PedidoDetalheContent() {
                   className="mt-4 font-mono text-3xl font-bold tracking-widest text-center"
                   style={{ color: cor }}
                 >
-                  {codigo}
+                  {formatarCodigoRetirada(codigo)}
                 </p>
               ) : (
                 <p className="mt-4 text-center text-sm text-amber-700">

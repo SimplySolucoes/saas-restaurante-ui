@@ -8,6 +8,7 @@ import PedidoPrepagoDetalheModal, {
 } from "@/components/gestao/PedidoPrepagoDetalheModal";
 import { getRestaurante, listPedidosPrePago, patchPedidoPrePagoRetirado } from "@/lib/api";
 import { navFlagsFromRestaurante } from "@/lib/gestaoNav";
+import { formatarCodigoRetirada } from "@/lib/prepagoPedidosUi";
 
 function textoResumoItensTabela(itensResumo) {
   const linhas = linhasItensDeResumo(itensResumo);
@@ -182,7 +183,7 @@ export default function GestaoPedidosPage() {
 
   const codigoConteudo = (p) => (
     <span className="inline-block max-w-full break-words rounded-md bg-indigo-50 px-2 py-2 font-mono text-base font-extrabold tracking-wide text-indigo-900 ring-1 ring-indigo-200/70 [overflow-wrap:anywhere] md:bg-transparent md:px-0 md:py-1 md:ring-0 lg:py-0">
-      {p.codigo_retirada}
+      {formatarCodigoRetirada(p.codigo_retirada)}
     </span>
   );
 
@@ -224,48 +225,46 @@ export default function GestaoPedidosPage() {
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col self-stretch">
       <div className="mx-auto flex w-full min-w-0 max-w-screen-2xl flex-1 flex-col">
         <header className="mb-6 shrink-0 border-b border-gray-200 pb-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl">Pedidos (pré-pago)</h1>
-              <p className="mt-2 text-sm text-gray-600 sm:text-base">
-                Pedidos das últimas {meta.janela_horas} horas. Não retirados expiram após{" "}
-                {meta.janela_horas} horas.
-              </p>
-              {meta.desde && !loading && (
-                <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-                  Desde {formatDesde(meta.desde)} · {meta.count} pedido
-                  {meta.count !== 1 ? "s" : ""}
-                  {meta.pendentes_retirada > 0 && (
-                    <span className="font-medium text-orange-700">
-                      {" "}
-                      · {meta.pendentes_retirada} por retirar
-                    </span>
-                  )}
-                </p>
-              )}
-            </div>
-            <form
-              className="flex w-full shrink-0 flex-col gap-2 sm:max-w-sm sm:flex-row"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setBuscaCodigo(buscaInput.trim());
-              }}
+          <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl">Pedidos (pré-pago)</h1>
+          <form
+            className="mt-4 flex w-full max-w-md flex-col gap-2 sm:flex-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setBuscaCodigo(buscaInput.trim());
+            }}
+          >
+            <input
+              type="search"
+              value={buscaInput}
+              onChange={(e) => setBuscaInput(e.target.value)}
+              placeholder="Buscar por código…"
+              className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
             >
-              <input
-                type="search"
-                value={buscaInput}
-                onChange={(e) => setBuscaInput(e.target.value)}
-                placeholder="Buscar por código…"
-                className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-              <button
-                type="submit"
-                className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-              >
-                Buscar
-              </button>
-            </form>
-          </div>
+              Buscar
+            </button>
+          </form>
+          {meta.desde && !loading && (
+            <p className="mt-3 text-xs text-gray-500 sm:text-sm">
+              Pedidos das últimas {meta.janela_horas} horas · Desde {formatDesde(meta.desde)} ·{" "}
+              {meta.count} pedido
+              {meta.count !== 1 ? "s" : ""}
+              {meta.pendentes_retirada > 0 && (
+                <span className="font-medium text-orange-700">
+                  {" "}
+                  · {meta.pendentes_retirada} por retirar
+                </span>
+              )}
+            </p>
+          )}
+          {!meta.desde && !loading && (
+            <p className="mt-3 text-sm text-gray-600">
+              Pedidos das últimas {meta.janela_horas} horas.
+            </p>
+          )}
         </header>
 
         {loading && <p className="text-gray-500">A carregar…</p>}

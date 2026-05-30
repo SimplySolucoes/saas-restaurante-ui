@@ -26,6 +26,7 @@ import {
   getRestaurante,
 } from "@/lib/api";
 import { isModoPrePago, navFlagsFromRestaurante } from "@/lib/gestaoNav";
+import { formatarCodigoRetirada } from "@/lib/prepagoPedidosUi";
 
 const PERIODOS = [
   { id: "hoje", label: "Hoje" },
@@ -477,7 +478,7 @@ function PedidosTab({ token, periodo, prepago }) {
                     {data.results.map((row) => (
                       <tr key={row.id} className="hover:bg-gray-50/80">
                         <td className="px-4 py-3 font-mono font-semibold text-indigo-900">
-                          {row.identificador}
+                          {prepago ? formatarCodigoRetirada(row.identificador) : row.identificador}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 tabular-nums text-gray-700">
                           {formatDataHora(row.data_hora)}

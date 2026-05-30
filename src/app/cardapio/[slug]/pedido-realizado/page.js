@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { getPublicCardapioData } from "@/lib/api";
 import PrepagoCardapioHeader from "@/components/menu/PrepagoCardapioHeader";
+import { formatarCodigoRetirada } from "@/lib/prepagoPedidosUi";
 
 function PedidoRealizadoContent() {
   const params = useParams();
@@ -62,7 +63,7 @@ function PedidoRealizadoContent() {
               className="mt-6 font-mono text-3xl font-bold tracking-widest"
               style={{ color: cor }}
             >
-              {codigo}
+              {formatarCodigoRetirada(codigo)}
             </p>
           ) : (
             <p className="mt-6 text-sm text-amber-700">Código não disponível neste link.</p>

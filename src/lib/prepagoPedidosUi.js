@@ -1,3 +1,11 @@
+/** Formata código de retirada para exibição (ex.: K7M4R9 → K7M-4R9). */
+export function formatarCodigoRetirada(codigo) {
+  if (!codigo) return "";
+  const c = String(codigo).replace(/-/g, "").toUpperCase();
+  if (c.length !== 6) return String(codigo);
+  return `${c.slice(0, 3)}-${c.slice(3)}`;
+}
+
 export function formatMoeda(valor) {
   const n = Number(valor);
   if (Number.isNaN(n)) return valor ?? "—";

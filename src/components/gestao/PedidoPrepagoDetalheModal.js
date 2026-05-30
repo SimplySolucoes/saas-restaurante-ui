@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { formatarCodigoRetirada } from "@/lib/prepagoPedidosUi";
 
 export function linhasItensDeResumo(itensResumo) {
   if (!itensResumo || String(itensResumo).trim() === "—") return [];
@@ -61,7 +62,7 @@ export default function PedidoPrepagoDetalheModal({ pedido, onClose, onMarcarRet
               Código de retirada
             </p>
             <p className="mt-1 break-all font-mono text-2xl font-extrabold tracking-wide text-indigo-900 sm:text-3xl">
-              {pedido.codigo_retirada}
+              {formatarCodigoRetirada(pedido.codigo_retirada)}
             </p>
           </div>
           <button
