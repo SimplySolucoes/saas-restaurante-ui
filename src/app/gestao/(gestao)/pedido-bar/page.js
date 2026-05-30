@@ -248,6 +248,7 @@ export default function PedidoBarPage() {
         pedidoId: result.id,
         publicToken: result.public_token,
         stripePublishableKey: result.stripe_publishable_key || "",
+        stripeConnectAccountId: result.stripe_connect_account_id || "",
         stripeClientSecret: result.stripe_client_secret || "",
         valorCobranca: resolveValorCobrancaPrepago(result),
         nome,
@@ -368,6 +369,7 @@ export default function PedidoBarPage() {
             setCtxStripe(null);
           }}
           stripePublishableKey={ctxStripe.stripePublishableKey}
+          stripeConnectAccountId={ctxStripe.stripeConnectAccountId}
           stripeClientSecret={ctxStripe.stripeClientSecret}
           valorCobranca={ctxStripe.valorCobranca}
           pedidoId={ctxStripe.pedidoId}

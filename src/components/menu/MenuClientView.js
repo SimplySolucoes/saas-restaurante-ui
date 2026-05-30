@@ -337,6 +337,10 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
           result.stripe_publishable_key ||
           pagamentoConfig.stripe_publishable_key ||
           "",
+        stripeConnectAccountId:
+          result.stripe_connect_account_id ||
+          pagamentoConfig.stripe_connect_account_id ||
+          "",
         stripeClientSecret: result.stripe_client_secret || "",
         valorCobranca,
         nome,
@@ -565,6 +569,7 @@ if (error) {
             setCtxStripe(null);
           }}
           stripePublishableKey={ctxStripe.stripePublishableKey}
+          stripeConnectAccountId={ctxStripe.stripeConnectAccountId}
           stripeClientSecret={ctxStripe.stripeClientSecret}
           valorCobranca={ctxStripe.valorCobranca}
           valoresPrepago={valoresPrepagoPedido}

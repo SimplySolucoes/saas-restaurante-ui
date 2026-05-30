@@ -21,6 +21,7 @@ export default function usePrepagoPagamentoConfig(slug, enabled = true) {
     stripe_wallet_configurada: false,
     mp_public_key: "",
     stripe_publishable_key: "",
+    stripe_connect_account_id: "",
     repassar_taxa_ao_consumidor: false,
     taxa_servico_brl: "0.00",
   });
@@ -48,6 +49,7 @@ export default function usePrepagoPagamentoConfig(slug, enabled = true) {
           stripe_wallet_configurada: cfg.stripe_wallet_configurada === true,
           mp_public_key: cfg.mp_public_key || "",
           stripe_publishable_key: cfg.stripe_publishable_key || "",
+          stripe_connect_account_id: cfg.stripe_connect_account_id || "",
           repassar_taxa_ao_consumidor: cfg.repassar_taxa_ao_consumidor === true,
           taxa_servico_brl: cfg.taxa_servico_brl || "0.00",
         });

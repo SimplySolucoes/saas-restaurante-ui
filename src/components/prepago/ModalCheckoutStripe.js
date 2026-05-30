@@ -104,6 +104,7 @@ export default function ModalCheckoutStripe({
   open,
   onClose,
   stripePublishableKey,
+  stripeConnectAccountId,
   stripeClientSecret,
   valorCobranca,
   valoresPrepago = null,
@@ -119,8 +120,11 @@ export default function ModalCheckoutStripe({
 
   const stripePromise = useMemo(() => {
     if (!stripePublishableKey) return null;
-    return loadStripe(stripePublishableKey);
-  }, [stripePublishableKey]);
+    const options = stripeConnectAccountId
+      ? { stripeAccount: stripeConnectAccountId }
+      : undefined;
+    return loadStripe(stripePublishableKey, options);
+  }, [stripePublishableKey, stripeConnectAccountId]);
 
   const verificarPoll = useCallback(async () => {
     if (!pedidoId || !publicToken) return;

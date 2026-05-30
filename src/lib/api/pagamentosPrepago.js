@@ -13,6 +13,7 @@ const DEFAULT_CONFIG = {
   stripe_wallet_configurada: false,
   mp_public_key: "",
   stripe_publishable_key: "",
+  stripe_connect_account_id: "",
   ambiente: "",
   repassar_taxa_ao_consumidor: false,
   taxa_servico_brl: "0.00",
