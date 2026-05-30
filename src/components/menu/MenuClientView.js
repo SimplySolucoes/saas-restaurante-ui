@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import MenuItemCard from "./MenuItemCard";
 import FloatingCartButton from "../cart/FloatingCartButton";
@@ -16,6 +17,10 @@ import ModalPagamentoPix from "@/components/prepago/ModalPagamentoPix";
 import ModalEscolhaPagamentoPrepago from "@/components/prepago/ModalEscolhaPagamentoPrepago";
 import ModalCheckoutCarteira from "@/components/prepago/ModalCheckoutCarteira";
 import useCarteiraDigitalDisponivel from "@/hooks/useCarteiraDigitalDisponivel";
+import {
+  entryFromCreateResponse,
+  upsertPedidoLocal,
+} from "@/lib/prepagoPedidosLocal";
 
 export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const router = useRouter();
@@ -45,6 +50,7 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const [modalCarteiraAberto, setModalCarteiraAberto] = useState(false);
   const [ctxCarteira, setCtxCarteira] = useState(null);
   const [dadosCompradorPendentes, setDadosCompradorPendentes] = useState(null);
+  const ctxPagamentoRef = useRef(null);
 
   const {
     disponivel: carteiraDisponivel,
@@ -184,18 +190,37 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     await handleSubmitOrderMesa();
   };
 
-  const handlePixPagamentoAprovado = useCallback(
+  const redirectPedidoRealizado = useCallback(
     ({ codigo_retirada, nome }) => {
+      const ctx = ctxPagamentoRef.current;
+      if (ctx?.pedidoId && ctx?.publicToken) {
+        upsertPedidoLocal(slug, {
+          pedidoId: ctx.pedidoId,
+          publicToken: ctx.publicToken,
+          compradorNome: nome || ctx.compradorNome || "",
+          codigoRetirada: codigo_retirada || "",
+        });
+      }
       setModalPixAberto(false);
+      setModalCarteiraAberto(false);
       setCtxPix(null);
+      setCtxCarteira(null);
+      ctxPagamentoRef.current = null;
       setCarrinho([]);
       localStorage.removeItem(cartKey);
       const q = new URLSearchParams();
       if (codigo_retirada) q.set("codigo", codigo_retirada);
       if (nome) q.set("nome", nome);
+      if (ctx?.pedidoId) q.set("pedidoId", String(ctx.pedidoId));
+      if (ctx?.publicToken) q.set("token", ctx.publicToken);
       router.push(`/cardapio/${slug}/pedido-realizado?${q.toString()}`);
     },
     [slug, router, cartKey]
+  );
+
+  const handlePixPagamentoAprovado = useCallback(
+    (payload) => redirectPedidoRealizado(payload),
+    [redirectPedidoRealizado]
   );
 
   const criarPedidoPrepago = async (nome, telefone, metodoPagamento) => {
@@ -212,6 +237,8 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       setErroApiPrepago(result.error);
       return null;
     }
+    const entry = entryFromCreateResponse(result, nome);
+    if (entry) upsertPedidoLocal(slug, entry);
     return result;
   };
 
@@ -231,13 +258,16 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       return;
     }
     setModalEscolhaPagamentoAberto(false);
-    setCtxPix({
+    const ctx = {
       pedidoId: result.id,
       publicToken: result.public_token,
       pixCopiaCola: result.pix_copia_cola || "",
       valorCobrancaPix: resolveValorCobrancaPrepago(result),
       nome,
-    });
+      compradorNome: nome,
+    };
+    ctxPagamentoRef.current = ctx;
+    setCtxPix(ctx);
     setModalPixAberto(true);
     setDadosCompradorPendentes(null);
   };
@@ -253,24 +283,23 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       return;
     }
     setModalEscolhaPagamentoAberto(false);
-    setCtxCarteira({
+    const ctx = {
       pedidoId: result.id,
       publicToken: result.public_token,
       mpPublicKey: result.mp_public_key || mpPublicKeyHook,
       valorCobranca: resolveValorCobrancaPrepago(result),
       nome,
-    });
+      compradorNome: nome,
+    };
+    ctxPagamentoRef.current = ctx;
+    setCtxCarteira(ctx);
     setModalCarteiraAberto(true);
     setDadosCompradorPendentes(null);
   };
 
   const handleCarteiraPagamentoAprovado = useCallback(
-    ({ codigo_retirada, nome }) => {
-      setModalCarteiraAberto(false);
-      setCtxCarteira(null);
-      handlePixPagamentoAprovado({ codigo_retirada, nome });
-    },
-    [handlePixPagamentoAprovado]
+    (payload) => redirectPedidoRealizado(payload),
+    [redirectPedidoRealizado]
   );
 
   const handleSubmitOrderMesa = async () => {
@@ -350,22 +379,32 @@ if (error) {
     <div className="bg-gray-100 min-h-screen relative">
      <div className="sticky top-0 z-20 shadow-lg">
         <header 
-          className="p-4 flex items-center justify-center space-x-4 text-white" 
+          className="p-4 flex items-center justify-between gap-3 text-white" 
           style={{ backgroundColor: restaurante.cor_principal }}
         >
-          {restaurante.logo && (
-            <Image 
-              src={restaurante.logo} 
-              alt={`Logo de ${restaurante.nome}`}
-              width={64}
-              height={64}
-              className="rounded-md object-cover"
-            />
-          )}
-          <div className="text-left">
-            <h1 className="text-3xl font-bold">{restaurante.nome}</h1>
-            <p>{subtituloMesa}</p>
+          <div className="flex min-w-0 flex-1 items-center justify-center space-x-4">
+            {restaurante.logo && (
+              <Image 
+                src={restaurante.logo} 
+                alt={`Logo de ${restaurante.nome}`}
+                width={64}
+                height={64}
+                className="rounded-md object-cover shrink-0"
+              />
+            )}
+            <div className="text-left min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold truncate">{restaurante.nome}</h1>
+              <p className="text-sm sm:text-base">{subtituloMesa}</p>
+            </div>
           </div>
+          {prepago && (
+            <Link
+              href={`/cardapio/${slug}/meus-pedidos`}
+              className="shrink-0 rounded-lg border border-white/40 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 transition-colors"
+            >
+              Meus pedidos
+            </Link>
+          )}
         </header>
         
         <nav className="bg-white/80 backdrop-blur-sm">

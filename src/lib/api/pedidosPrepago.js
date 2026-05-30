@@ -91,7 +91,8 @@ export function resolveValorCobrancaPrepago(result) {
 }
 
 /**
- * Consulta status do pagamento PIX (público; requer token opaco do pedido).
+ * Consulta pública do pedido pré-pago (token opaco): status de pagamento, código de retirada
+ * (quando aprovado), total, itens e dados seguros para o comprador.
  */
 export async function getPrepagoPagamentoStatus(pedidoId, publicToken) {
   const url = new URL(

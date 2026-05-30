@@ -9,6 +9,8 @@ function PedidoRealizadoContent() {
   const searchParams = useSearchParams();
   const slug = params?.slug;
   const codigo = searchParams?.get("codigo") || "";
+  const pedidoId = searchParams?.get("pedidoId") || "";
+  const token = searchParams?.get("token") || "";
   const nomeRaw = searchParams?.get("nome") || "";
   let nome = "";
   try {
@@ -16,6 +18,11 @@ function PedidoRealizadoContent() {
   } catch {
     nome = nomeRaw;
   }
+
+  const verPedidoHref =
+    slug && pedidoId && token
+      ? `/cardapio/${slug}/pedido/${pedidoId}?token=${encodeURIComponent(token)}`
+      : null;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-6">
@@ -29,9 +36,17 @@ function PedidoRealizadoContent() {
         ) : (
           <p className="mt-6 text-sm text-amber-700">Código não disponível neste link.</p>
         )}
+        {verPedidoHref ? (
+          <Link
+            href={verPedidoHref}
+            className="mt-6 inline-block w-full rounded-lg border border-indigo-200 py-3 font-semibold text-indigo-700 hover:bg-indigo-50"
+          >
+            Ver pedido
+          </Link>
+        ) : null}
         <Link
           href={slug ? `/cardapio/${slug}` : "/"}
-          className="mt-8 inline-block w-full rounded-lg bg-indigo-600 py-3 font-semibold text-white hover:bg-indigo-700"
+          className={`inline-block w-full rounded-lg bg-indigo-600 py-3 font-semibold text-white hover:bg-indigo-700 ${verPedidoHref ? "mt-3" : "mt-8"}`}
         >
           Voltar ao cardápio
         </Link>
