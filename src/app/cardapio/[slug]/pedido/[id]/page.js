@@ -71,13 +71,15 @@ function PedidoDetalheContent() {
     } else {
       setErro("");
       setApi(r);
-      if (slug) {
+      if (slug && r.status_pagamento === "aprovado") {
         upsertPedidoLocal(slug, {
           pedidoId: Number(pedidoId),
           publicToken: token,
           ...entryFromStatusApi(r),
         });
         setLocal(getPedidoLocal(slug, pedidoId));
+      } else if (slug) {
+        setLocal(null);
       }
     }
     setCarregando(false);

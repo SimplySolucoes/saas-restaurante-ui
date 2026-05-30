@@ -21,10 +21,7 @@ import {
   buildPrepagoValoresFromConfig,
   buildPrepagoValoresFromPedido,
 } from "@/lib/prepagoTaxaUi";
-import {
-  entryFromCreateResponse,
-  upsertPedidoLocal,
-} from "@/lib/prepagoPedidosLocal";
+import { upsertPedidoLocal } from "@/lib/prepagoPedidosLocal";
 
 export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const router = useRouter();
@@ -271,8 +268,6 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       setErroApiPrepago(result.error);
       return null;
     }
-    const entry = entryFromCreateResponse(result, nome);
-    if (entry) upsertPedidoLocal(slug, entry);
     setValoresPrepagoPedido(buildPrepagoValoresFromPedido(result));
     return result;
   };

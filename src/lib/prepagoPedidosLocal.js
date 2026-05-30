@@ -57,6 +57,11 @@ function normalizeEntry(entry) {
   };
 }
 
+/** Pedido com pagamento confirmado (aparece em Meus pedidos). */
+export function pedidoPagamentoAprovado(entry) {
+  return entry?.statusPagamento === "aprovado";
+}
+
 /** Remove expirados, ordena do mais recente ao mais antigo. */
 export function getPedidosRecentes(slug) {
   const fresh = parseRaw(slug)
@@ -66,6 +71,45 @@ export function getPedidosRecentes(slug) {
     .sort((a, b) => Date.parse(b.criadoEm) - Date.parse(a.criadoEm));
   persist(slug, fresh);
   return fresh;
+}
+
+/** Só pedidos pagos (para a lista Meus pedidos). */
+export function getPedidosRecentesPagos(slug) {
+  return getPedidosRecentes(slug).filter(pedidoPagamentoAprovado);
+}
+
+export function removePedidoLocal(slug, pedidoId) {
+  if (!slug || pedidoId == null) return;
+  const id = Number(pedidoId);
+  const kept = parseRaw(slug)
+    .map(normalizeEntry)
+    .filter(Boolean)
+    .filter((e) => e.pedidoId !== id);
+  persist(slug, kept);
+}
+
+/**
+ * Sincroniza com a API, mantém no storage só pagos aprovados, remove o resto.
+ */
+export async function syncPedidosPagosLocal(slug, fetchStatus) {
+  if (!slug || typeof fetchStatus !== "function") return [];
+  const local = getPedidosRecentes(slug);
+  await Promise.all(
+    local.map(async (p) => {
+      const r = await fetchStatus(p.pedidoId, p.publicToken);
+      if (r?.error) return;
+      if (r.status_pagamento === "aprovado") {
+        upsertPedidoLocal(slug, {
+          pedidoId: p.pedidoId,
+          publicToken: p.publicToken,
+          ...entryFromStatusApi(r),
+        });
+      } else {
+        removePedidoLocal(slug, p.pedidoId);
+      }
+    })
+  );
+  return getPedidosRecentesPagos(slug);
 }
 
 export function getPedidoLocal(slug, pedidoId) {

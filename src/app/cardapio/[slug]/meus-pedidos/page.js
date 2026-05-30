@@ -6,11 +6,7 @@ import { useParams } from "next/navigation";
 import { getPublicCardapioData } from "@/lib/api";
 import { getPrepagoPagamentoStatus } from "@/lib/api/pedidosPrepago";
 import PrepagoCardapioHeader from "@/components/menu/PrepagoCardapioHeader";
-import {
-  entryFromStatusApi,
-  getPedidosRecentes,
-  upsertPedidoLocal,
-} from "@/lib/prepagoPedidosLocal";
+import { syncPedidosPagosLocal } from "@/lib/prepagoPedidosLocal";
 import {
   formatHoraPedido,
   formatMoeda,
@@ -28,21 +24,10 @@ export default function MeusPedidosPage() {
   const cor = restaurante?.cor_principal || "#4F46E5";
 
   const sincronizarPedidos = useCallback(async () => {
-    if (!slug) return;
-    const local = getPedidosRecentes(slug);
-    await Promise.all(
-      local.map(async (p) => {
-        const r = await getPrepagoPagamentoStatus(p.pedidoId, p.publicToken);
-        if (!r.error) {
-          upsertPedidoLocal(slug, {
-            pedidoId: p.pedidoId,
-            publicToken: p.publicToken,
-            ...entryFromStatusApi(r),
-          });
-        }
-      })
-    );
-    setPedidos(getPedidosRecentes(slug));
+    if (!slug) return [];
+    const pagos = await syncPedidosPagosLocal(slug, getPrepagoPagamentoStatus);
+    setPedidos(pagos);
+    return pagos;
   }, [slug]);
 
   useEffect(() => {
@@ -84,7 +69,9 @@ export default function MeusPedidosPage() {
             <p className="text-center text-gray-500 py-8">A carregar…</p>
           ) : pedidos.length === 0 ? (
             <div className="rounded-xl bg-white p-8 text-center shadow">
-              <p className="text-gray-600">Nenhum pedido nas últimas 12 horas.</p>
+              <p className="text-gray-600">
+                Nenhum pedido pago nas últimas 12 horas.
+              </p>
               <Link
                 href={slug ? `/cardapio/${slug}` : "/"}
                 className="mt-6 inline-block rounded-lg px-6 py-3 font-semibold text-white hover:opacity-90"
