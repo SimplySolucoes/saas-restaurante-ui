@@ -1,92 +1,146 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { getPedidosRecentes } from "@/lib/prepagoPedidosLocal";
-
-function formatHora(iso) {
-  try {
-    return new Date(iso).toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
-}
-
-function formatTotal(total) {
-  const n = Number(total);
-  if (Number.isNaN(n)) return total;
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+import { getPublicCardapioData } from "@/lib/api";
+import { getPrepagoPagamentoStatus } from "@/lib/api/pedidosPrepago";
+import PrepagoCardapioHeader from "@/components/menu/PrepagoCardapioHeader";
+import {
+  entryFromStatusApi,
+  getPedidosRecentes,
+  upsertPedidoLocal,
+} from "@/lib/prepagoPedidosLocal";
+import {
+  formatHoraPedido,
+  formatMoeda,
+  getEstadoPedidoBadge,
+  labelValorPedido,
+} from "@/lib/prepagoPedidosUi";
 
 export default function MeusPedidosPage() {
   const params = useParams();
   const slug = params?.slug;
+  const [restaurante, setRestaurante] = useState(null);
   const [pedidos, setPedidos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
 
-  useEffect(() => {
+  const cor = restaurante?.cor_principal || "#4F46E5";
+
+  const sincronizarPedidos = useCallback(async () => {
     if (!slug) return;
+    const local = getPedidosRecentes(slug);
+    await Promise.all(
+      local.map(async (p) => {
+        const r = await getPrepagoPagamentoStatus(p.pedidoId, p.publicToken);
+        if (!r.error) {
+          upsertPedidoLocal(slug, {
+            pedidoId: p.pedidoId,
+            publicToken: p.publicToken,
+            ...entryFromStatusApi(r),
+          });
+        }
+      })
+    );
     setPedidos(getPedidosRecentes(slug));
   }, [slug]);
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
-      <div className="mx-auto max-w-md">
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">Meus pedidos</h1>
-          <Link
-            href={slug ? `/cardapio/${slug}` : "/"}
-            className="text-sm font-semibold text-indigo-600 hover:text-indigo-800"
-          >
-            Cardápio
-          </Link>
-        </div>
+  useEffect(() => {
+    if (!slug) return;
+    getPublicCardapioData(slug).then((data) => {
+      if (data?.restaurante) setRestaurante(data.restaurante);
+    });
+  }, [slug]);
 
-        {pedidos.length === 0 ? (
-          <div className="rounded-xl bg-white p-8 text-center shadow">
-            <p className="text-gray-600">Nenhum pedido nas últimas 12 horas.</p>
-            <Link
-              href={slug ? `/cardapio/${slug}` : "/"}
-              className="mt-6 inline-block rounded-lg bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-700"
-            >
-              Voltar ao cardápio
-            </Link>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {pedidos.map((p) => (
-              <li key={p.pedidoId}>
-                <Link
-                  href={`/cardapio/${slug}/pedido/${p.pedidoId}?token=${encodeURIComponent(p.publicToken)}`}
-                  className="block rounded-xl bg-white p-4 shadow hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-mono text-lg font-bold text-indigo-700">
-                        {p.codigoRetirada || "—"}
-                      </p>
-                      <p className="mt-1 text-sm text-gray-500">{formatHora(p.criadoEm)}</p>
-                      {p.compradorNome ? (
-                        <p className="mt-1 text-sm text-gray-700 truncate">{p.compradorNome}</p>
-                      ) : null}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-semibold text-gray-900">{formatTotal(p.total)}</p>
-                      <span className="mt-2 inline-block text-sm font-semibold text-indigo-600">
-                        Ver pedido
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setCarregando(true);
+      await sincronizarPedidos();
+      if (!cancelled) setCarregando(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sincronizarPedidos]);
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      {restaurante ? (
+        <PrepagoCardapioHeader
+          restaurante={restaurante}
+          slug={slug}
+          subtitulo="Meus pedidos"
+          linkHref={`/cardapio/${slug}`}
+          linkLabel="Cardápio"
+        />
+      ) : (
+        <div className="h-20 bg-gray-200 animate-pulse" />
+      )}
+
+      <div className="p-4 md:p-8">
+        <div className="mx-auto max-w-md">
+          {carregando ? (
+            <p className="text-center text-gray-500 py-8">A carregar…</p>
+          ) : pedidos.length === 0 ? (
+            <div className="rounded-xl bg-white p-8 text-center shadow">
+              <p className="text-gray-600">Nenhum pedido nas últimas 12 horas.</p>
+              <Link
+                href={slug ? `/cardapio/${slug}` : "/"}
+                className="mt-6 inline-block rounded-lg px-6 py-3 font-semibold text-white hover:opacity-90"
+                style={{ backgroundColor: cor }}
+              >
+                Voltar ao cardápio
+              </Link>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {pedidos.map((p) => {
+                const badge = getEstadoPedidoBadge(p);
+                const { prefix, valor } = labelValorPedido(p);
+                return (
+                  <li key={p.pedidoId}>
+                    <Link
+                      href={`/cardapio/${slug}/pedido/${p.pedidoId}?token=${encodeURIComponent(p.publicToken)}`}
+                      className="block rounded-xl bg-white p-4 shadow hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className="font-mono text-lg font-bold"
+                            style={{ color: cor }}
+                          >
+                            {p.codigoRetirada || "—"}
+                          </p>
+                          <p className="mt-1 text-sm text-gray-500">
+                            {formatHoraPedido(p.criadoEm)}
+                          </p>
+                          <span
+                            className={`mt-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}
+                          >
+                            {badge.label}
+                          </span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs text-gray-500">{prefix}</p>
+                          <p className="font-semibold text-gray-900">
+                            {formatMoeda(valor)}
+                          </p>
+                          <span
+                            className="mt-2 inline-block text-sm font-semibold"
+                            style={{ color: cor }}
+                          >
+                            Ver pedido
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

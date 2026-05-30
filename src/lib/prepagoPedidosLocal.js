@@ -41,7 +41,15 @@ function normalizeEntry(entry) {
     criadoEm: entry.criadoEm || new Date().toISOString(),
     codigoRetirada: entry.codigoRetirada || "",
     total: entry.total != null ? String(entry.total) : "0",
+    valorCobranca:
+      entry.valorCobranca != null
+        ? String(entry.valorCobranca)
+        : entry.total != null
+          ? String(entry.total)
+          : "0",
     compradorNome: entry.compradorNome || "",
+    retirado: Boolean(entry.retirado),
+    statusPagamento: entry.statusPagamento ?? null,
   };
 }
 
@@ -91,15 +99,42 @@ export function upsertPedidoLocal(slug, partial) {
   return fresh.find((e) => e.pedidoId === normalized.pedidoId) || normalized;
 }
 
+/** Atualiza campos vindos de status-pagamento (API pública). */
+export function entryFromStatusApi(api) {
+  if (!api) return {};
+  return {
+    codigoRetirada: api.codigo_retirada || "",
+    total: api.total != null ? String(api.total) : undefined,
+    valorCobranca:
+      api.valor_cobranca != null
+        ? String(api.valor_cobranca)
+        : api.total != null
+          ? String(api.total)
+          : undefined,
+    retirado: Boolean(api.retirado),
+    statusPagamento: api.status_pagamento ?? null,
+    compradorNome: api.comprador_nome || undefined,
+    criadoEm: api.data_hora || undefined,
+  };
+}
+
 /** Monta entrada a partir da resposta POST prepago-pedidos. */
 export function entryFromCreateResponse(result, compradorNome) {
   if (!result?.id || !result?.public_token) return null;
+  const valor =
+    result.valor_cobranca ||
+    result.valor_cobranca_pix ||
+    result.total ||
+    "0";
   return {
     pedidoId: result.id,
     publicToken: result.public_token,
     criadoEm: result.data_hora || new Date().toISOString(),
     codigoRetirada: result.codigo_retirada || "",
     total: result.total != null ? String(result.total) : "0",
+    valorCobranca: String(valor),
     compradorNome: compradorNome || result.comprador_nome || "",
+    retirado: Boolean(result.retirado),
+    statusPagamento: result.status_pagamento ?? null,
   };
 }

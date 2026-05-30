@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import MenuItemCard from "./MenuItemCard";
+import PrepagoCardapioHeader from "./PrepagoCardapioHeader";
 import FloatingCartButton from "../cart/FloatingCartButton";
 import ResumoPedido from "../cart/ResumoPedido"; 
 import CategoryMenu from "./CategoryMenu";
@@ -199,6 +198,9 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
           publicToken: ctx.publicToken,
           compradorNome: nome || ctx.compradorNome || "",
           codigoRetirada: codigo_retirada || "",
+          statusPagamento: "aprovado",
+          retirado: false,
+          valorCobranca: ctx.valorCobranca,
         });
       }
       setModalPixAberto(false);
@@ -258,11 +260,13 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       return;
     }
     setModalEscolhaPagamentoAberto(false);
+    const valorCobranca = resolveValorCobrancaPrepago(result);
     const ctx = {
       pedidoId: result.id,
       publicToken: result.public_token,
       pixCopiaCola: result.pix_copia_cola || "",
-      valorCobrancaPix: resolveValorCobrancaPrepago(result),
+      valorCobrancaPix: valorCobranca,
+      valorCobranca,
       nome,
       compradorNome: nome,
     };
@@ -283,11 +287,12 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       return;
     }
     setModalEscolhaPagamentoAberto(false);
+    const valorCobranca = resolveValorCobrancaPrepago(result);
     const ctx = {
       pedidoId: result.id,
       publicToken: result.public_token,
       mpPublicKey: result.mp_public_key || mpPublicKeyHook,
-      valorCobranca: resolveValorCobrancaPrepago(result),
+      valorCobranca,
       nome,
       compradorNome: nome,
     };
@@ -377,36 +382,15 @@ if (error) {
 
   return (
     <div className="bg-gray-100 min-h-screen relative">
-     <div className="sticky top-0 z-20 shadow-lg">
-        <header 
-          className="p-4 flex items-center justify-between gap-3 text-white" 
-          style={{ backgroundColor: restaurante.cor_principal }}
-        >
-          <div className="flex min-w-0 flex-1 items-center justify-center space-x-4">
-            {restaurante.logo && (
-              <Image 
-                src={restaurante.logo} 
-                alt={`Logo de ${restaurante.nome}`}
-                width={64}
-                height={64}
-                className="rounded-md object-cover shrink-0"
-              />
-            )}
-            <div className="text-left min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold truncate">{restaurante.nome}</h1>
-              <p className="text-sm sm:text-base">{subtituloMesa}</p>
-            </div>
-          </div>
-          {prepago && (
-            <Link
-              href={`/cardapio/${slug}/meus-pedidos`}
-              className="shrink-0 rounded-lg border border-white/40 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20 transition-colors"
-            >
-              Meus pedidos
-            </Link>
-          )}
-        </header>
-        
+      <div className="sticky top-0 z-20 shadow-lg">
+        <PrepagoCardapioHeader
+          embedded
+          restaurante={restaurante}
+          slug={slug}
+          subtitulo={subtituloMesa}
+          linkHref={prepago ? `/cardapio/${slug}/meus-pedidos` : undefined}
+          linkLabel={prepago ? "Meus pedidos" : undefined}
+        />
         <nav className="bg-white/80 backdrop-blur-sm">
           <CategoryMenu 
             categorias={categorias}
