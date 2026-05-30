@@ -8,6 +8,14 @@ import PrepagoResumoValores from "@/components/prepago/PrepagoResumoValores";
 
 const POLL_MS = 4000;
 
+const WALLET_CUSTOMIZATION = {
+  paymentMethods: {
+    types: {
+      excluded: ["credit_card", "debit_card", "prepaid_card"],
+    },
+  },
+};
+
 export default function ModalCheckoutCarteira({
   open,
   onClose,
@@ -100,7 +108,7 @@ export default function ModalCheckoutCarteira({
   const handleBrickError = useCallback(() => {
     setBrickErro(true);
     onClose?.();
-    onErro?.("Não foi possível abrir o pagamento com cartão.");
+    onErro?.("Não foi possível abrir o pagamento por carteira.");
   }, [onClose, onErro]);
 
   if (!open || !carteiraDisponivel) return null;
@@ -117,7 +125,7 @@ export default function ModalCheckoutCarteira({
           id="carteira-modal-titulo"
           className="text-lg font-bold text-gray-900"
         >
-          Pagamento com cartão
+          Pagamento
         </h2>
         {valoresPrepago ? (
           <PrepagoResumoValores
@@ -142,11 +150,7 @@ export default function ModalCheckoutCarteira({
           <div className="mt-4 min-h-[120px]">
             <CardPayment
               initialization={{ amount }}
-              customization={{
-                paymentMethods: {
-                  maxInstallments: 1,
-                },
-              }}
+              customization={WALLET_CUSTOMIZATION}
               onSubmit={handleSubmit}
               onError={handleBrickError}
             />
