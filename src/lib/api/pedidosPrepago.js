@@ -109,12 +109,17 @@ export async function getPrepagoPagamentoStatus(pedidoId, publicToken) {
   return data;
 }
 
-export async function listPedidosPrePago(token) {
-  if (!token) return [];
-  const response = await fetch(`${getApiUrl()}/prepago-pedidos/`, {
+export async function listPedidosPrePago(token, { operacional = false, codigo = "" } = {}) {
+  if (!token) return operacional ? { results: [], count: 0 } : [];
+  const url = new URL(`${getApiUrl()}/prepago-pedidos/`);
+  if (operacional) url.searchParams.set("operacional", "1");
+  if (codigo && codigo.trim()) url.searchParams.set("codigo", codigo.trim());
+  const response = await fetch(url.toString(), {
     headers: { Authorization: `Token ${token}` },
   });
-  if (!response.ok) return [];
+  if (!response.ok) {
+    return operacional ? { results: [], count: 0, error: true } : [];
+  }
   return response.json();
 }
 
@@ -130,9 +135,11 @@ export async function patchPedidoPrePagoRetirado(token, pedidoId, retirado) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    return {
-      error: data.detail || "Falha ao atualizar.",
-    };
+    const detail = data.detail;
+    const msg = Array.isArray(detail)
+      ? detail.join(" ")
+      : detail || "Falha ao atualizar.";
+    return { error: msg };
   }
   return data;
 }
