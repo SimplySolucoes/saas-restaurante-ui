@@ -210,6 +210,12 @@ export default function SecaoMercadoPagoGestao({ onIntegracaoChange }) {
                 R$ {integracao.taxa_fixa_brl ?? "0.00"}
               </dd>
             </div>
+            <div>
+              <dt className="text-gray-500">Taxa repassada ao cliente</dt>
+              <dd className="text-gray-800">
+                {integracao.repassar_taxa_ao_consumidor ? "Sim (taxa de serviço)" : "Não (absorvida pelo estabelecimento)"}
+              </dd>
+            </div>
           </dl>
           <button
             type="button"

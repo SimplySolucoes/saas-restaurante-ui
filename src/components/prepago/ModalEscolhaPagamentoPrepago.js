@@ -1,5 +1,7 @@
 "use client";
 
+import PrepagoResumoValores from "@/components/prepago/PrepagoResumoValores";
+
 export default function ModalEscolhaPagamentoPrepago({
   open,
   onClose,
@@ -10,6 +12,7 @@ export default function ModalEscolhaPagamentoPrepago({
   corPrincipal = "#4F46E5",
   loadingPix = false,
   apiError = "",
+  valoresPrepago = null,
 }) {
   if (!open) return null;
 
@@ -26,6 +29,13 @@ export default function ModalEscolhaPagamentoPrepago({
         <p className="mt-1 text-sm text-gray-600">
           Escolha a forma de pagamento para confirmar o pedido.
         </p>
+        {valoresPrepago ? (
+          <PrepagoResumoValores
+            valores={valoresPrepago}
+            corPrincipal={corPrincipal}
+            className="mt-4"
+          />
+        ) : null}
         {apiError ? (
           <p className="mt-4 text-sm text-red-600" role="alert">
             {apiError}

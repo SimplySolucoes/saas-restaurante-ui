@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getPrepagoPagamentoStatus } from "@/lib/api/pedidosPrepago";
+import PrepagoResumoValores from "@/components/prepago/PrepagoResumoValores";
 
 const POLL_MS = 3000;
 
@@ -12,6 +13,7 @@ export default function ModalPagamentoPix({
   publicToken,
   pixCopiaCola,
   valorCobrancaPix,
+  valoresPrepago = null,
   corPrincipal,
   nomeComprador,
   onPagamentoAprovado,
@@ -102,14 +104,20 @@ export default function ModalPagamentoPix({
           Escaneie o QR Code ou use copia e cola no app do seu banco. O pedido só
           é confirmado após o pagamento.
         </p>
-        {valorCobrancaPix && (
+        {valoresPrepago ? (
+          <PrepagoResumoValores
+            valores={valoresPrepago}
+            corPrincipal={corPrincipal}
+            className="mt-3"
+          />
+        ) : valorCobrancaPix ? (
           <p className="mt-3 text-base font-medium text-gray-800">
-            Valor:{" "}
+            Total a pagar:{" "}
             <span style={{ color: corPrincipal }}>
               R$ {Number(valorCobrancaPix).toFixed(2).replace(".", ",")}
             </span>
           </p>
-        )}
+        ) : null}
 
         {qrDataUrl && (
           <div className="mt-4 flex justify-center">

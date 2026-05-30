@@ -79,7 +79,7 @@ export async function createPedidoPrePago(
   return data;
 }
 
-/** Valor total a cobrar (pedido + taxa), com fallback legado. */
+/** Valor total a cobrar no MP (com ou sem taxa de serviço repassada), com fallback legado. */
 export function resolveValorCobrancaPrepago(result) {
   if (!result) return "0";
   return (

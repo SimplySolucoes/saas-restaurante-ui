@@ -1,5 +1,7 @@
 "use client";
 
+import PrepagoResumoValores from "@/components/prepago/PrepagoResumoValores";
+
 export default function ResumoPedido({
   itensDoCarrinho,
   titulo = "Resumo do Pedido",
@@ -11,6 +13,7 @@ export default function ResumoPedido({
   onDiminuirQtde,
   onRemoverItem,
   confirmarDesabilitado = false,
+  prepagoValores = null,
 }) {
 
   const calcularSubtotalLinha = (item) => {
@@ -96,10 +99,18 @@ export default function ResumoPedido({
         </div>
         
         <div className="p-4 bg-gray-50 rounded-b-lg border-t">
-           <div className="flex justify-between font-bold text-lg mb-4">
-            <span>Total</span>
-            <span>R$ {totalPedido.toFixed(2).replace('.', ',')}</span>
-          </div>
+          {prepagoValores ? (
+            <PrepagoResumoValores
+              valores={prepagoValores}
+              corPrincipal={corPrincipal}
+              className="mb-4 bg-white"
+            />
+          ) : (
+            <div className="flex justify-between font-bold text-lg mb-4">
+              <span>Total</span>
+              <span>R$ {totalPedido.toFixed(2).replace(".", ",")}</span>
+            </div>
+          )}
           <button
             onClick={onConfirmar}
             className="w-full text-white font-bold py-3 px-6 rounded-lg shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"

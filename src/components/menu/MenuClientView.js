@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import MenuItemCard from "./MenuItemCard";
 import PrepagoCardapioHeader from "./PrepagoCardapioHeader";
@@ -16,6 +16,11 @@ import ModalPagamentoPix from "@/components/prepago/ModalPagamentoPix";
 import ModalEscolhaPagamentoPrepago from "@/components/prepago/ModalEscolhaPagamentoPrepago";
 import ModalCheckoutCarteira from "@/components/prepago/ModalCheckoutCarteira";
 import useCarteiraDigitalDisponivel from "@/hooks/useCarteiraDigitalDisponivel";
+import usePrepagoPagamentoConfig from "@/hooks/usePrepagoPagamentoConfig";
+import {
+  buildPrepagoValoresFromConfig,
+  buildPrepagoValoresFromPedido,
+} from "@/lib/prepagoTaxaUi";
 import {
   entryFromCreateResponse,
   upsertPedidoLocal,
@@ -57,6 +62,33 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     labelCarteira,
     mpPublicKey: mpPublicKeyHook,
   } = useCarteiraDigitalDisponivel(slug, prepago && prepagoPodePagar);
+
+  const { config: pagamentoConfig } = usePrepagoPagamentoConfig(
+    slug,
+    prepago && prepagoPodePagar
+  );
+
+  const [valoresPrepagoPedido, setValoresPrepagoPedido] = useState(null);
+
+  const subtotalCarrinho = useMemo(() => {
+    return carrinho.reduce((total, item) => {
+      const precoBase = parseFloat(item.preco || 0);
+      const precoOpcoes =
+        item.gruposSelecionados?.reduce((totalGrupo, grupo) => {
+          const totalOpcoesNoGrupo = grupo.opcoes.reduce(
+            (sub, opcao) => sub + parseFloat(opcao.preco_adicional || 0),
+            0
+          );
+          return totalGrupo + totalOpcoesNoGrupo;
+        }, 0) || 0;
+      return total + (precoBase + precoOpcoes) * item.quantidade;
+    }, 0);
+  }, [carrinho]);
+
+  const valoresPrepagoCarrinho = useMemo(() => {
+    if (!prepago || !prepagoPodePagar) return null;
+    return buildPrepagoValoresFromConfig(pagamentoConfig, subtotalCarrinho);
+  }, [prepago, prepagoPodePagar, pagamentoConfig, subtotalCarrinho]);
 
   const cartKey = `carrinho_${slug}_${numeroMesa}`;
   const sessionKey = `sessao_${slug}_${numeroMesa}`;
@@ -241,6 +273,7 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     }
     const entry = entryFromCreateResponse(result, nome);
     if (entry) upsertPedidoLocal(slug, entry);
+    setValoresPrepagoPedido(buildPrepagoValoresFromPedido(result));
     return result;
   };
 
@@ -472,6 +505,7 @@ if (error) {
         corPrincipal={restaurante.cor_principal}
         loadingPix={enviandoPrepago}
         apiError={erroApiPrepago}
+        valoresPrepago={valoresPrepagoPedido || valoresPrepagoCarrinho}
       />
 
       {ctxCarteira && (
@@ -483,6 +517,8 @@ if (error) {
           }}
           mpPublicKey={ctxCarteira.mpPublicKey}
           valorCobranca={ctxCarteira.valorCobranca}
+          valoresPrepago={valoresPrepagoPedido}
+          corPrincipal={restaurante.cor_principal}
           pedidoId={ctxCarteira.pedidoId}
           publicToken={ctxCarteira.publicToken}
           nomeComprador={ctxCarteira.nome}
@@ -502,6 +538,7 @@ if (error) {
           publicToken={ctxPix.publicToken}
           pixCopiaCola={ctxPix.pixCopiaCola}
           valorCobrancaPix={ctxPix.valorCobrancaPix}
+          valoresPrepago={valoresPrepagoPedido}
           corPrincipal={restaurante.cor_principal}
           nomeComprador={ctxPix.nome}
           onPagamentoAprovado={handlePixPagamentoAprovado}
@@ -533,6 +570,7 @@ if (error) {
           confirmarDesabilitado={
             pedidosForaDoHorario || (prepago && !prepagoPodePagar)
           }
+          prepagoValores={valoresPrepagoCarrinho}
         />
       )}
       

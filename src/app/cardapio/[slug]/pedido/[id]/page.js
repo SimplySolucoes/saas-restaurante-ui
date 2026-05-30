@@ -11,12 +11,13 @@ import {
   getPedidoLocal,
   upsertPedidoLocal,
 } from "@/lib/prepagoPedidosLocal";
+import PrepagoResumoValores from "@/components/prepago/PrepagoResumoValores";
 import {
   formatHoraPedido,
   formatMoeda,
   getEstadoPedidoBadge,
-  labelValorPedido,
 } from "@/lib/prepagoPedidosUi";
+import { buildPrepagoValoresFromStatus } from "@/lib/prepagoTaxaUi";
 
 const POLL_MS = 4000;
 
@@ -105,16 +106,13 @@ function PedidoDetalheContent() {
   const estadoLocal = local || {
     statusPagamento: api?.status_pagamento,
     retirado: api?.retirado,
-    valorCobranca: api?.valor_cobranca,
-    total: api?.total,
   };
-  const badge = getEstadoPedidoBadge(estadoLocal);
-  const { prefix, valor } = labelValorPedido({
+  const badge = getEstadoPedidoBadge({
     ...estadoLocal,
     statusPagamento: api?.status_pagamento ?? estadoLocal.statusPagamento,
-    valorCobranca: api?.valor_cobranca ?? estadoLocal.valorCobranca,
-    total: api?.total ?? estadoLocal.total,
+    retirado: api?.retirado ?? estadoLocal.retirado,
   });
+  const valoresResumo = api ? buildPrepagoValoresFromStatus(api) : null;
 
   if (!token) {
     return (
@@ -183,10 +181,13 @@ function PedidoDetalheContent() {
                 </p>
               )}
 
-              <p className="mt-4 text-right">
-                <span className="text-sm text-gray-500">{prefix}: </span>
-                <span className="text-lg font-bold text-gray-900">{formatMoeda(valor)}</span>
-              </p>
+              {valoresResumo ? (
+                <PrepagoResumoValores
+                  valores={valoresResumo}
+                  corPrincipal={cor}
+                  className="mt-4"
+                />
+              ) : null}
 
               {itens.length > 0 ? (
                 <ul className="mt-6 divide-y divide-gray-100 border-t border-gray-100 pt-4">

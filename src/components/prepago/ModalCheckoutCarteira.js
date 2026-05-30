@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { initMercadoPago, CardPayment } from "@mercadopago/sdk-react";
 import { getPrepagoPagamentoStatus } from "@/lib/api/pedidosPrepago";
 import { pagarCarteira } from "@/lib/api/pagamentosPrepago";
+import PrepagoResumoValores from "@/components/prepago/PrepagoResumoValores";
 
 const POLL_MS = 4000;
 
@@ -12,9 +13,11 @@ export default function ModalCheckoutCarteira({
   onClose,
   mpPublicKey,
   valorCobranca,
+  valoresPrepago = null,
   pedidoId,
   publicToken,
   nomeComprador,
+  corPrincipal = "#4F46E5",
   carteiraDisponivel,
   onAprovado,
   onErro,
@@ -116,16 +119,24 @@ export default function ModalCheckoutCarteira({
         >
           Pagamento com cartão
         </h2>
-        <p className="mt-1 text-sm text-gray-600">
-          Valor:{" "}
-          <span className="font-semibold text-gray-900">
-            R${" "}
-            {amount.toLocaleString("pt-BR", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>
-        </p>
+        {valoresPrepago ? (
+          <PrepagoResumoValores
+            valores={valoresPrepago}
+            corPrincipal={corPrincipal}
+            className="mt-3"
+          />
+        ) : (
+          <p className="mt-1 text-sm text-gray-600">
+            Total a pagar:{" "}
+            <span className="font-semibold text-gray-900">
+              R${" "}
+              {amount.toLocaleString("pt-BR", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+          </p>
+        )}
 
         {mpReady && amount > 0 && !brickErro ? (
           <div className="mt-4 min-h-[120px]">
