@@ -6,6 +6,10 @@ function storageKey(slug) {
   return `prepago_pedidos_${slug}`;
 }
 
+function compradorKey(slug) {
+  return `prepago_comprador_${slug}`;
+}
+
 function isBrowser() {
   return typeof window !== "undefined" && typeof localStorage !== "undefined";
 }
@@ -116,6 +120,41 @@ export function entryFromStatusApi(api) {
     compradorNome: api.comprador_nome || undefined,
     criadoEm: api.data_hora || undefined,
   };
+}
+
+/** Nome e telefone do comprador no mesmo dispositivo (12h, por slug). */
+export function getCompradorLocal(slug) {
+  if (!isBrowser() || !slug) return null;
+  try {
+    const raw = localStorage.getItem(compradorKey(slug));
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data?.atualizadoEm || !withinWindow(data.atualizadoEm)) {
+      localStorage.removeItem(compradorKey(slug));
+      return null;
+    }
+    const nome = (data.nome || "").trim();
+    const telefone = (data.telefone || "").trim();
+    if (!nome && !telefone) return null;
+    return { nome, telefone };
+  } catch {
+    return null;
+  }
+}
+
+export function saveCompradorLocal(slug, nome, telefone) {
+  if (!isBrowser() || !slug) return;
+  const n = (nome || "").trim();
+  const t = (telefone || "").trim();
+  if (!n && !t) return;
+  localStorage.setItem(
+    compradorKey(slug),
+    JSON.stringify({
+      nome: n,
+      telefone: t,
+      atualizadoEm: new Date().toISOString(),
+    })
+  );
 }
 
 /** Monta entrada a partir da resposta POST prepago-pedidos. */

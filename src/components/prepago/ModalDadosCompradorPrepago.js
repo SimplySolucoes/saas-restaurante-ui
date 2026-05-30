@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getCompradorLocal, saveCompradorLocal } from "@/lib/prepagoPedidosLocal";
 
 /**
  * Passo antes do POST: nome e telefone do comprador (pedido pré-pago).
+ * Com `slug`, reutiliza dados salvos no dispositivo (últimas 12h).
  */
 export default function ModalDadosCompradorPrepago({
   open,
   onClose,
+  slug,
   corPrincipal = "#4F46E5",
   loading = false,
   apiError = "",
@@ -18,12 +21,15 @@ export default function ModalDadosCompradorPrepago({
   const [erroLocal, setErroLocal] = useState("");
 
   useEffect(() => {
-    if (!open) {
-      setNome("");
-      setTelefone("");
+    if (open) {
+      const saved = slug ? getCompradorLocal(slug) : null;
+      setNome(saved?.nome || "");
+      setTelefone(saved?.telefone || "");
+      setErroLocal("");
+    } else {
       setErroLocal("");
     }
-  }, [open]);
+  }, [open, slug]);
 
   if (!open) return null;
 
@@ -46,7 +52,10 @@ export default function ModalDadosCompradorPrepago({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validar()) return;
-    onConfirmar(nome.trim(), telefone.trim());
+    const n = nome.trim();
+    const t = telefone.trim();
+    if (slug) saveCompradorLocal(slug, n, t);
+    onConfirmar(n, t);
   };
 
   return (

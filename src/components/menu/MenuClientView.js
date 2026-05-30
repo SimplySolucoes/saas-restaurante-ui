@@ -445,6 +445,7 @@ if (error) {
 
       <ModalDadosCompradorPrepago
         open={modalCompradorAberto}
+        slug={slug}
         onClose={() => {
           if (!enviandoPrepago) {
             setModalCompradorAberto(false);
