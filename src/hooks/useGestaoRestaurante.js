@@ -33,6 +33,7 @@ export default function useGestaoRestaurante(token) {
               gestao_nav_novo_pedido: data.gestao_nav_novo_pedido,
               gestao_nav_pedidos: data.gestao_nav_pedidos,
               gestao_config_mostrar_gerir_mesas: data.gestao_config_mostrar_gerir_mesas,
+              gestao_nav_analytics: data.gestao_nav_analytics,
               permite_compra_publica: data.permite_compra_publica,
             };
             localStorage.setItem("userData", JSON.stringify(u));

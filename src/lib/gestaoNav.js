@@ -33,5 +33,6 @@ export function navFlagsFromRestaurante(restaurante) {
     /** Lista pré-pago: visível no modo bar ou se a flag admin estiver ligada (mesa / futuro). */
     pedidos: r.gestao_nav_pedidos === true || prepago,
     gerirMesas: r.gestao_config_mostrar_gerir_mesas !== false,
+    analytics: r.gestao_nav_analytics === true,
   };
 }
