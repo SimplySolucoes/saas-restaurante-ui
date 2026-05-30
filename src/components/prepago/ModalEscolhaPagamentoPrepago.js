@@ -9,6 +9,7 @@ export default function ModalEscolhaPagamentoPrepago({
   onEscolherCarteira,
   mostrarCarteira = false,
   labelCarteira = "Pagar com cartão",
+  gateway = "MERCADO_PAGO",
   corPrincipal = "#4F46E5",
   loadingPix = false,
   apiError = "",

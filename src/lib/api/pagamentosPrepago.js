@@ -1,27 +1,35 @@
 import { getApiUrl } from "./config";
 
+const DEFAULT_CONFIG = {
+  gateway_pagamento: "MERCADO_PAGO",
+  metodos_disponiveis: {
+    gateway: "MERCADO_PAGO",
+    pix: false,
+    carteira_mp: false,
+    stripe_wallet: false,
+  },
+  prepago_pagamento_configurado: false,
+  carteira_digital_configurada: false,
+  stripe_wallet_configurada: false,
+  mp_public_key: "",
+  stripe_publishable_key: "",
+  ambiente: "",
+  repassar_taxa_ao_consumidor: false,
+  taxa_servico_brl: "0.00",
+};
+
 export async function getConfigPagamento(slug) {
   try {
     const response = await fetch(
       `${getApiUrl()}/cardapio/${encodeURIComponent(slug)}/config-pagamento/`
     );
     if (!response.ok) {
-      return {
-        prepago_pagamento_configurado: false,
-        carteira_digital_configurada: false,
-        mp_public_key: "",
-        ambiente: "",
-      };
+      return { ...DEFAULT_CONFIG };
     }
     return await response.json();
   } catch (error) {
     console.error("API Error (getConfigPagamento):", error);
-    return {
-      prepago_pagamento_configurado: false,
-      carteira_digital_configurada: false,
-      mp_public_key: "",
-      ambiente: "",
-    };
+    return { ...DEFAULT_CONFIG };
   }
 }
 

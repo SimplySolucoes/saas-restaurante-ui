@@ -15,6 +15,7 @@ import ModalDadosCompradorPrepago from "@/components/prepago/ModalDadosComprador
 import ModalPagamentoPix from "@/components/prepago/ModalPagamentoPix";
 import ModalEscolhaPagamentoPrepago from "@/components/prepago/ModalEscolhaPagamentoPrepago";
 import ModalCheckoutCarteira from "@/components/prepago/ModalCheckoutCarteira";
+import ModalCheckoutStripe from "@/components/prepago/ModalCheckoutStripe";
 import useCarteiraDigitalDisponivel from "@/hooks/useCarteiraDigitalDisponivel";
 import usePrepagoPagamentoConfig from "@/hooks/usePrepagoPagamentoConfig";
 import {
@@ -49,7 +50,9 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const [ctxPix, setCtxPix] = useState(null);
   const [modalEscolhaPagamentoAberto, setModalEscolhaPagamentoAberto] = useState(false);
   const [modalCarteiraAberto, setModalCarteiraAberto] = useState(false);
+  const [modalStripeAberto, setModalStripeAberto] = useState(false);
   const [ctxCarteira, setCtxCarteira] = useState(null);
+  const [ctxStripe, setCtxStripe] = useState(null);
   const [dadosCompradorPendentes, setDadosCompradorPendentes] = useState(null);
   const ctxPagamentoRef = useRef(null);
 
@@ -58,6 +61,7 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     carregando: carteiraCarregando,
     labelCarteira,
     mpPublicKey: mpPublicKeyHook,
+    gateway: gatewayPagamento,
   } = useCarteiraDigitalDisponivel(slug, prepago && prepagoPodePagar);
 
   const { config: pagamentoConfig } = usePrepagoPagamentoConfig(
@@ -234,8 +238,10 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
       }
       setModalPixAberto(false);
       setModalCarteiraAberto(false);
+      setModalStripeAberto(false);
       setCtxPix(null);
       setCtxCarteira(null);
+      setCtxStripe(null);
       ctxPagamentoRef.current = null;
       setCarrinho([]);
       localStorage.removeItem(cartKey);
@@ -309,24 +315,49 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     setModalEscolhaPagamentoAberto(false);
     const { nome, telefone } = dadosCompradorPendentes || {};
     if (!nome) return;
-    const result = await criarPedidoPrepago(nome, telefone, "carteira");
+
+    const metodo =
+      (pagamentoConfig?.gateway_pagamento || gatewayPagamento) === "STRIPE"
+        ? "stripe_wallet"
+        : "carteira";
+
+    const result = await criarPedidoPrepago(nome, telefone, metodo);
     if (!result) {
       setModalEscolhaPagamentoAberto(true);
       return;
     }
     setModalEscolhaPagamentoAberto(false);
     const valorCobranca = resolveValorCobrancaPrepago(result);
-    const ctx = {
-      pedidoId: result.id,
-      publicToken: result.public_token,
-      mpPublicKey: result.mp_public_key || mpPublicKeyHook,
-      valorCobranca,
-      nome,
-      compradorNome: nome,
-    };
-    ctxPagamentoRef.current = ctx;
-    setCtxCarteira(ctx);
-    setModalCarteiraAberto(true);
+
+    if (metodo === "stripe_wallet") {
+      const ctx = {
+        pedidoId: result.id,
+        publicToken: result.public_token,
+        stripePublishableKey:
+          result.stripe_publishable_key ||
+          pagamentoConfig.stripe_publishable_key ||
+          "",
+        stripeClientSecret: result.stripe_client_secret || "",
+        valorCobranca,
+        nome,
+        compradorNome: nome,
+      };
+      ctxPagamentoRef.current = ctx;
+      setCtxStripe(ctx);
+      setModalStripeAberto(true);
+    } else {
+      const ctx = {
+        pedidoId: result.id,
+        publicToken: result.public_token,
+        mpPublicKey: result.mp_public_key || mpPublicKeyHook,
+        valorCobranca,
+        nome,
+        compradorNome: nome,
+      };
+      ctxPagamentoRef.current = ctx;
+      setCtxCarteira(ctx);
+      setModalCarteiraAberto(true);
+    }
     setDadosCompradorPendentes(null);
   };
 
@@ -434,8 +465,8 @@ if (error) {
         )}
         {prepagoSemConfigPagamento && (
           <div className="bg-red-50 text-red-900 text-center text-sm font-medium py-2 px-4 border-b border-red-100">
-            Pagamentos PIX não estão disponíveis neste momento. O estabelecimento precisa
-            concluir a configuração do Mercado Pago.
+            Pagamentos não estão disponíveis neste momento. O estabelecimento precisa
+            concluir a configuração do gateway de pagamento.
           </div>
         )}
       </div>
@@ -497,6 +528,7 @@ if (error) {
         onEscolherCarteira={handleEscolherCarteira}
         mostrarCarteira={carteiraDisponivel && !carteiraCarregando}
         labelCarteira={labelCarteira}
+        gateway={pagamentoConfig?.gateway_pagamento || gatewayPagamento}
         corPrincipal={restaurante.cor_principal}
         loadingPix={enviandoPrepago}
         apiError={erroApiPrepago}
@@ -525,6 +557,28 @@ if (error) {
         />
       )}
 
+      {ctxStripe && (
+        <ModalCheckoutStripe
+          open={modalStripeAberto}
+          onClose={() => {
+            setModalStripeAberto(false);
+            setCtxStripe(null);
+          }}
+          stripePublishableKey={ctxStripe.stripePublishableKey}
+          stripeClientSecret={ctxStripe.stripeClientSecret}
+          valorCobranca={ctxStripe.valorCobranca}
+          valoresPrepago={valoresPrepagoPedido}
+          corPrincipal={restaurante.cor_principal}
+          pedidoId={ctxStripe.pedidoId}
+          publicToken={ctxStripe.publicToken}
+          nomeComprador={ctxStripe.nome}
+          onAprovado={handleCarteiraPagamentoAprovado}
+          onErro={(msg) =>
+            setToastState({ show: true, message: msg, type: "error" })
+          }
+        />
+      )}
+
       {ctxPix && (
         <ModalPagamentoPix
           open={modalPixAberto}
@@ -537,6 +591,9 @@ if (error) {
           corPrincipal={restaurante.cor_principal}
           nomeComprador={ctxPix.nome}
           onPagamentoAprovado={handlePixPagamentoAprovado}
+          somenteCopiaCola={
+            (pagamentoConfig?.gateway_pagamento || gatewayPagamento) === "STRIPE"
+          }
         />
       )}
 

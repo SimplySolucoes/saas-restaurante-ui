@@ -17,6 +17,7 @@ export default function ModalPagamentoPix({
   corPrincipal,
   nomeComprador,
   onPagamentoAprovado,
+  somenteCopiaCola = false,
 }) {
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [erroPoll, setErroPoll] = useState("");
@@ -28,7 +29,7 @@ export default function ModalPagamentoPix({
   }, [onPagamentoAprovado]);
 
   useEffect(() => {
-    if (!open || !pixCopiaCola) {
+    if (!open || !pixCopiaCola || somenteCopiaCola) {
       setQrDataUrl("");
       return undefined;
     }
@@ -46,7 +47,7 @@ export default function ModalPagamentoPix({
     return () => {
       cancelled = true;
     };
-  }, [open, pixCopiaCola]);
+  }, [open, pixCopiaCola, somenteCopiaCola]);
 
   const verificar = useCallback(async () => {
     if (!pedidoId || !publicToken) return;
@@ -101,8 +102,9 @@ export default function ModalPagamentoPix({
           Pagamento PIX
         </h2>
         <p className="mt-2 text-sm text-gray-600">
-          Escaneie o QR Code ou use copia e cola no app do seu banco. O pedido só
-          é confirmado após o pagamento.
+          {somenteCopiaCola
+            ? "Copie o código abaixo e cole no app do seu banco. O pedido só é confirmado após o pagamento."
+            : "Escaneie o QR Code ou use copia e cola no app do seu banco. O pedido só é confirmado após o pagamento."}
         </p>
         {valoresPrepago ? (
           <PrepagoResumoValores
@@ -119,7 +121,7 @@ export default function ModalPagamentoPix({
           </p>
         ) : null}
 
-        {qrDataUrl && (
+        {qrDataUrl && !somenteCopiaCola && (
           <div className="mt-4 flex justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qrDataUrl} alt="QR Code PIX" className="rounded-lg border border-gray-200" />
