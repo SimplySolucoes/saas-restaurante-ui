@@ -20,7 +20,6 @@ import ModalDadosCompradorPrepago from "@/components/prepago/ModalDadosComprador
 import ModalPagamentoPix from "@/components/prepago/ModalPagamentoPix";
 import ModalEscolhaPagamentoPrepago from "@/components/prepago/ModalEscolhaPagamentoPrepago";
 import ModalCheckoutCarteira from "@/components/prepago/ModalCheckoutCarteira";
-import ModalCheckoutStripe from "@/components/prepago/ModalCheckoutStripe";
 import useCarteiraDigitalDisponivel from "@/hooks/useCarteiraDigitalDisponivel";
 
 export default function PedidoBarPage() {
@@ -40,9 +39,7 @@ export default function PedidoBarPage() {
   const [ctxPix, setCtxPix] = useState(null);
   const [modalEscolhaPagamentoAberto, setModalEscolhaPagamentoAberto] = useState(false);
   const [modalCarteiraAberto, setModalCarteiraAberto] = useState(false);
-  const [modalStripeAberto, setModalStripeAberto] = useState(false);
   const [ctxCarteira, setCtxCarteira] = useState(null);
-  const [ctxStripe, setCtxStripe] = useState(null);
   const [dadosCompradorPendentes, setDadosCompradorPendentes] = useState(null);
 
   const carregar = async () => {
@@ -233,37 +230,21 @@ export default function PedidoBarPage() {
     const { nome, telefone } = dadosCompradorPendentes || {};
     if (!nome || !token || !slug) return;
 
-    const gw = restaurante?.gateway_pagamento || gatewayPagamento;
-    const metodo = gw === "STRIPE" ? "stripe_wallet" : "carteira";
-
-    const result = await criarPedidoPrepago(nome, telefone, metodo);
+    const result = await criarPedidoPrepago(nome, telefone, "carteira");
     if (!result) {
       setModalEscolhaPagamentoAberto(true);
       return;
     }
     setModalEscolhaPagamentoAberto(false);
-
-    if (metodo === "stripe_wallet") {
-      setCtxStripe({
-        pedidoId: result.id,
-        publicToken: result.public_token,
-        stripePublishableKey: result.stripe_publishable_key || "",
-        stripeConnectAccountId: result.stripe_connect_account_id || "",
-        stripeClientSecret: result.stripe_client_secret || "",
-        valorCobranca: resolveValorCobrancaPrepago(result),
-        nome,
-      });
-      setModalStripeAberto(true);
-    } else {
-      setCtxCarteira({
-        pedidoId: result.id,
-        publicToken: result.public_token,
-        mpPublicKey: result.mp_public_key || mpPublicKeyHook,
-        valorCobranca: resolveValorCobrancaPrepago(result),
-        nome,
-      });
-      setModalCarteiraAberto(true);
-    }
+    setCtxCarteira({
+      pedidoId: result.id,
+      publicToken: result.public_token,
+      mpPublicKey: result.mp_public_key || mpPublicKeyHook,
+      valorCobranca: resolveValorCobrancaPrepago(result),
+      nome,
+      telefone,
+    });
+    setModalCarteiraAberto(true);
     setDadosCompradorPendentes(null);
   };
 
@@ -293,7 +274,7 @@ export default function PedidoBarPage() {
         )}
         {prepagoSemConfigPagamento && (
           <p className="mt-2 text-red-800 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm">
-            Mercado Pago / Stripe não está configurado ou habilitado. Não é possível criar pedidos até
+            Mercado Pago não está configurado ou habilitado. Não é possível criar pedidos até
             concluir a integração.
           </p>
         )}
@@ -361,25 +342,6 @@ export default function PedidoBarPage() {
         />
       )}
 
-      {ctxStripe && (
-        <ModalCheckoutStripe
-          open={modalStripeAberto}
-          onClose={() => {
-            setModalStripeAberto(false);
-            setCtxStripe(null);
-          }}
-          stripePublishableKey={ctxStripe.stripePublishableKey}
-          stripeConnectAccountId={ctxStripe.stripeConnectAccountId}
-          stripeClientSecret={ctxStripe.stripeClientSecret}
-          valorCobranca={ctxStripe.valorCobranca}
-          pedidoId={ctxStripe.pedidoId}
-          publicToken={ctxStripe.publicToken}
-          nomeComprador={ctxStripe.nome}
-          onAprovado={handleCarteiraPagamentoAprovado}
-          onErro={(msg) => setToastState({ show: true, message: msg })}
-        />
-      )}
-
       {ctxPix && (
         <ModalPagamentoPix
           open={modalPixAberto}
@@ -391,9 +353,6 @@ export default function PedidoBarPage() {
           corPrincipal={restaurante?.cor_principal || "#4F46E5"}
           nomeComprador={ctxPix.nome}
           onPagamentoAprovado={handlePixPagamentoAprovado}
-          somenteCopiaCola={
-            (restaurante?.gateway_pagamento || gatewayPagamento) === "STRIPE"
-          }
         />
       )}
 

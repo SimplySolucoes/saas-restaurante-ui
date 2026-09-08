@@ -6,14 +6,12 @@ const DEFAULT_CONFIG = {
     gateway: "MERCADO_PAGO",
     pix: false,
     carteira_mp: false,
-    stripe_wallet: false,
+    cartao: false,
+    wallet: false,
   },
   prepago_pagamento_configurado: false,
   carteira_digital_configurada: false,
-  stripe_wallet_configurada: false,
   mp_public_key: "",
-  stripe_publishable_key: "",
-  stripe_connect_account_id: "",
   ambiente: "",
   repassar_taxa_ao_consumidor: false,
   taxa_servico_brl: "0.00",
@@ -34,16 +32,21 @@ export async function getConfigPagamento(slug) {
   }
 }
 
+/**
+ * Finaliza pagamento com carteira/cartão via Mercado Pago (form_data do Brick).
+ */
 export async function pagarCarteira(pedidoId, publicToken, formData) {
+  const body = {
+    token: publicToken,
+    form_data: formData || {},
+  };
+
   const response = await fetch(
     `${getApiUrl()}/prepago-pedidos/${pedidoId}/pagar-carteira/`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        token: publicToken,
-        form_data: formData,
-      }),
+      body: JSON.stringify(body),
     }
   );
   const data = await response.json().catch(() => ({}));

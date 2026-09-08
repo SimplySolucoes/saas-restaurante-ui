@@ -19,7 +19,6 @@ import useAuth from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { navFlagsFromRestaurante, MODO_LABEL, isModoPrePago } from '@/lib/gestaoNav';
 import SecaoMercadoPagoGestao from '@/components/gestao/SecaoMercadoPagoGestao';
-import SecaoStripeGestao from '@/components/gestao/SecaoStripeGestao';
 import { getApiUrl } from "@/lib/api/config";
 
 
@@ -427,11 +426,7 @@ export default function ConfiguracoesPage() {
       
       {activeTab === 'restaurante' && isModoPrePago(restaurante) && (
         <Suspense fallback={<div className="mt-6 text-sm text-gray-500">A carregar pagamentos…</div>}>
-          {restaurante.gateway_pagamento === 'STRIPE' ? (
-            <SecaoStripeGestao onIntegracaoChange={() => carregarDados()} />
-          ) : (
-            <SecaoMercadoPagoGestao onIntegracaoChange={() => carregarDados()} />
-          )}
+          <SecaoMercadoPagoGestao onIntegracaoChange={() => carregarDados()} />
         </Suspense>
       )}
 
