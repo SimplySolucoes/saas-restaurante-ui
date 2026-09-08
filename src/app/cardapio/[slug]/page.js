@@ -15,13 +15,12 @@ export default async function CardapioPublicoPage({ params }) {
     notFound();
   }
 
-  /* Modo bar / pré-pago: mesmo URL público com carrinho e código de retirada (sem /m/N). */
+  /* Modo bar / pré-pago: mesmo URL público com carrinho e código de retirada. */
   if (isModoPrePago(data.restaurante)) {
     return (
       <MenuClientView
         initialData={data}
         slug={slug}
-        numeroMesa="balcao"
       />
     );
   }

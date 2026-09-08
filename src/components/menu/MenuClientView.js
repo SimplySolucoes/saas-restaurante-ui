@@ -7,7 +7,7 @@ import PrepagoCardapioHeader from "./PrepagoCardapioHeader";
 import FloatingCartButton from "../cart/FloatingCartButton";
 import ResumoPedido from "../cart/ResumoPedido"; 
 import CategoryMenu from "./CategoryMenu";
-import { createSessionByNumber, submitOrder, getSessionStatus, createPedidoPrePago, resolveValorCobrancaPrepago } from "@/lib/api";
+import { createPedidoPrePago, resolveValorCobrancaPrepago } from "@/lib/api";
 import { isModoPrePago } from "@/lib/gestaoNav";
 import Toast from "@/components/ui/Toast";
 import ModalSelecaoOpcoes from "@/components/ui/ModalSelecaoOpcoes";
@@ -23,7 +23,7 @@ import {
 } from "@/lib/prepagoTaxaUi";
 import { upsertPedidoLocal } from "@/lib/prepagoPedidosLocal";
 
-export default function MenuClientView({ initialData, slug, numeroMesa }) {
+export default function MenuClientView({ initialData, slug }) {
   const router = useRouter();
   const { restaurante, categorias, itens } = initialData;
   const prepago = isModoPrePago(restaurante);
@@ -41,9 +41,7 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
   const [erroApiPrepago, setErroApiPrepago] = useState("");
   const [itemParaOpcoes, setItemParaOpcoes] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [sessao, setSessao] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [toastState, setToastState] = useState({ show: false, message: '', type: 'success' });
   const [modalPixAberto, setModalPixAberto] = useState(false);
   const [ctxPix, setCtxPix] = useState(null);
@@ -88,43 +86,15 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     return buildPrepagoValoresFromConfig(pagamentoConfig, subtotalCarrinho);
   }, [prepago, prepagoPodePagar, pagamentoConfig, subtotalCarrinho]);
 
-  const cartKey = `carrinho_${slug}_${numeroMesa}`;
-  const sessionKey = `sessao_${slug}_${numeroMesa}`;
-
-
-  useEffect(() => {
-    if (!sessao?.id || sessao.prepago) return;
-
-    const intervalId = setInterval(async () => {
-      const sessaoAtualizada = await getSessionStatus(sessao.id);
-
-      if (sessaoAtualizada.status === "fechada") {
-        alert("Esta conta foi encerrada. Obrigado!");
-
-        localStorage.removeItem(cartKey);
-        localStorage.removeItem(sessionKey);
-        window.location.reload();
-      }
-    }, 10000);
-
-    return () => clearInterval(intervalId);
-  }, [sessao, cartKey, sessionKey]);
+  const cartKey = `carrinho_${slug}`;
 
   useEffect(() => {
     const storedCart = localStorage.getItem(cartKey);
     if (storedCart) {
       setCarrinho(JSON.parse(storedCart));
     }
-    if (prepago) {
-      setSessao({ prepago: true });
-    } else {
-      const storedSession = localStorage.getItem(`sessao_${slug}_${numeroMesa}`);
-      if (storedSession) {
-        setSessao(JSON.parse(storedSession));
-      }
-    }
     setIsLoading(false);
-  }, [slug, numeroMesa, cartKey, prepago]);
+  }, [cartKey]);
 
   useEffect(() => {
     if (carrinho.length > 0) {
@@ -171,52 +141,27 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     });
   };
 
- const handleStartSession = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    const segredo = sessionStorage.getItem(`segredo_mesa_${slug}_${numeroMesa}`);
-    if (!segredo) {
-      setError("autenticação falhou. Por favor, escaneie o QR Code novamente.");
-      setIsLoading(false);
-      return;
-    }
-
-    const newSession = await createSessionByNumber(slug, numeroMesa, segredo);
-    if (newSession && !newSession.error) {
-      setSessao(newSession);
-      localStorage.setItem(`sessao_${slug}_${numeroMesa}`, JSON.stringify(newSession));
-    } else {
-      setError(newSession.error || "Não foi possível iniciar uma nova sessão.");
-    }
-    setIsLoading(false);
-  };
-
   const handleResumoConfirmar = async () => {
-    if (prepago) {
-      if (pedidosForaDoHorario) {
-        setToastState({
-          show: true,
-          message: "Fora do horário de pedidos.",
-          type: "error",
-        });
-        return;
-      }
-      if (!prepagoPodePagar) {
-        setToastState({
-          show: true,
-          message:
-            "Pagamentos não estão configurados para este estabelecimento. Tente mais tarde.",
-          type: "error",
-        });
-        return;
-      }
-      setIsCarrinhoOpen(false);
-      setErroApiPrepago("");
-      setModalCompradorAberto(true);
+    if (pedidosForaDoHorario) {
+      setToastState({
+        show: true,
+        message: "Fora do horário de pedidos.",
+        type: "error",
+      });
       return;
     }
-    await handleSubmitOrderMesa();
+    if (!prepagoPodePagar) {
+      setToastState({
+        show: true,
+        message:
+          "Pagamentos não estão configurados para este estabelecimento. Tente mais tarde.",
+        type: "error",
+      });
+      return;
+    }
+    setIsCarrinhoOpen(false);
+    setErroApiPrepago("");
+    setModalCompradorAberto(true);
   };
 
   const redirectPedidoRealizado = useCallback(
@@ -338,77 +283,11 @@ export default function MenuClientView({ initialData, slug, numeroMesa }) {
     [redirectPedidoRealizado]
   );
 
-  const handleSubmitOrderMesa = async () => {
-    setIsLoading(true);
-    setError(null);
-    if (pedidosForaDoHorario) {
-      setToastState({
-        show: true,
-        message: "Fora do horário de pedidos.",
-        type: "error",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    if (!sessao || !sessao.id) {
-      setError("Sessão inválida. Por favor, recarregue a página.");
-      setToastState({
-        show: true,
-        message: "Sessão inválida. Recarregue a página.",
-        type: "error",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    const result = await submitOrder(sessao.id, carrinho);
-
-    if (result && !result.error) {
-      setToastState({
-        show: true,
-        message: "Pedido enviado com sucesso!",
-        type: "success",
-      });
-      setCarrinho([]);
-      setIsCarrinhoOpen(false);
-      localStorage.removeItem(cartKey);
-    } else {
-      setToastState({
-        show: true,
-        message: `Erro: ${result.error}`,
-        type: "error",
-      });
-    }
-    setIsLoading(false);
-  };
-
   const totalItemsInCart = carrinho.reduce((total, item) => total + item.quantidade, 0);
   const categoriasParaExibir = selectedCategory ? categorias.filter(cat => cat.nome === selectedCategory) : categorias;
 
-  const subtituloMesa =
-    prepago && String(numeroMesa).toLowerCase() === "balcao"
-      ? "Pedido para retirada"
-      : prepago
-        ? `Mesa ${numeroMesa} · Retirada`
-        : `MESA ${numeroMesa}`;
-
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">A carregar...</div>;
-  }
-if (error) {
-    return <div className="flex h-screen items-center justify-center text-red-500">{error}</div>;
-  }
-  if (!sessao && !prepago) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center bg-gray-100 p-4">
-        <h1 className="text-4xl font-bold" style={{ color: restaurante.cor_principal }}>Bem-vindo a {restaurante.nome}!</h1>
-        <p className="mt-4 text-lg text-gray-600">Mesa {numeroMesa}</p>
-        <button onClick={handleStartSession} className="mt-8 rounded-lg px-8 py-4 text-white font-bold shadow-lg transition-transform hover:scale-105" style={{ backgroundColor: restaurante.cor_principal }}>
-          Iniciar Novo Pedido
-        </button>
-      </div>
-    );
   }
 
   return (
@@ -418,9 +297,9 @@ if (error) {
           embedded
           restaurante={restaurante}
           slug={slug}
-          subtitulo={subtituloMesa}
-          linkHref={prepago ? `/cardapio/${slug}/meus-pedidos` : undefined}
-          linkLabel={prepago ? "Meus pedidos" : undefined}
+          subtitulo="Pedido para retirada"
+          linkHref={`/cardapio/${slug}/meus-pedidos`}
+          linkLabel="Meus pedidos"
         />
         <nav className="bg-white/80 backdrop-blur-sm">
           <CategoryMenu 
@@ -565,9 +444,9 @@ if (error) {
           onAumentarQtde={(item) => handleAlterarQuantidade(item, 1)}
           onDiminuirQtde={(item) => handleAlterarQuantidade(item, -1)}
           onRemoverItem={handleRemoverItem}
-          textoBotaoPrincipal={prepago ? "Confirmar pedido" : "Enviar Pedido"}
+          textoBotaoPrincipal="Confirmar pedido"
           confirmarDesabilitado={
-            pedidosForaDoHorario || (prepago && !prepagoPodePagar)
+            pedidosForaDoHorario || !prepagoPodePagar
           }
           prepagoValores={valoresPrepagoCarrinho}
         />

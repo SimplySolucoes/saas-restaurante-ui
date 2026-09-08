@@ -4,16 +4,16 @@
  */
 
 export const MODO_OPERACAO = {
-  TRADICIONAL_MESA: 'TRADICIONAL_MESA',
+  CARDAPIO_DIGITAL: 'CARDAPIO_DIGITAL',
   PRE_PAGO_WEB: 'PRE_PAGO_WEB',
 };
 
 export const MODO_LABEL = {
-  TRADICIONAL_MESA: 'Restaurante / mesas',
+  CARDAPIO_DIGITAL: 'Cardápio digital',
   PRE_PAGO_WEB: 'Bar — pré-pago (web)',
 };
 
-/** Cardápio / gestão: usar para escolher endpoint de pedido (mesa vs pré-pago). */
+/** Cardápio / gestão: usar para escolher endpoint de pedido (pré-pago vs só leitura). */
 export function isModoPrePago(restaurante) {
   const r = restaurante || {};
   if (r.permite_compra_publica === true) return true;
@@ -27,12 +27,9 @@ export function navFlagsFromRestaurante(restaurante) {
   const r = restaurante || {};
   const prepago = isModoPrePago(r);
   return {
-    modoOperacao: r.modo_operacao || MODO_OPERACAO.TRADICIONAL_MESA,
-    mesaAtiva: r.gestao_nav_mesa_ativa !== false,
-    novoPedido: r.gestao_nav_novo_pedido !== false,
-    /** Lista pré-pago: visível no modo bar ou se a flag admin estiver ligada (mesa / futuro). */
+    modoOperacao: r.modo_operacao || MODO_OPERACAO.CARDAPIO_DIGITAL,
+    /** Lista pré-pago: visível no modo bar ou se a flag admin estiver ligada. */
     pedidos: r.gestao_nav_pedidos === true || prepago,
-    gerirMesas: r.gestao_config_mostrar_gerir_mesas !== false,
     analytics: r.gestao_nav_analytics === true,
   };
 }

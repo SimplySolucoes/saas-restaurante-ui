@@ -35,7 +35,7 @@ function normalizeCreateOpts(optsOrString) {
 /**
  * Cliente público ou staff: cria pedido pré-pago (modo bar).
  * @param {string} restauranteSlug
- * @param {Array} cartItems — mesmo formato que submitOrder
+ * @param {Array} cartItems — linhas do carrinho (produtoId, quantidade, opções)
  * @param {string|null} token — opcional; se enviado, associa criado_por
  * @param {string|object} [opts] — string legada = observacoesGerais; ou { observacoesGerais, compradorNome, compradorTelefone }
  */

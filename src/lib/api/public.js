@@ -32,25 +32,6 @@ export async function getBrandingBySlug(slug) {
   }
 }
 
-export async function createSessionByNumber(slug, numeroMesa, segredo) {
-  try {
-    const response = await fetch(`${getApiUrl()}/sessoes/iniciar/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        restaurante_slug: slug, 
-        mesa_numero: numeroMesa,
-        segredo: segredo 
-      }),
-    });
-    if (!response.ok) throw new Error('Falha ao criar sessão. Verifique o QR Code.');
-    return await response.json();
-  } catch (error) {
-    console.error("API Error (createSessionByNumber):", error);
-    return { error: error.message };
-  }
-}
-
 // --- Funções antigas (podem ser úteis ou removidas) ---
 export async function getRestauranteData(restauranteId) {
   try {
@@ -84,4 +65,3 @@ export async function getItensCardapio(restauranteId) {
     return [];
   }
 }
-

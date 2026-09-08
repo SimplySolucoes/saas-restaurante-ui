@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import useAuth from "@/hooks/useAuth";
 import useGestaoRestaurante from "@/hooks/useGestaoRestaurante";
-import { navFlagsFromRestaurante, MODO_OPERACAO } from "@/lib/gestaoNav";
+import { navFlagsFromRestaurante } from "@/lib/gestaoNav";
 
 const MenuIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-6 w-6" aria-hidden>
@@ -19,8 +19,6 @@ const CloseIcon = () => (
   </svg>
 );
 
-const MesaAtivaIcon = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6"><path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10zm0 5.25a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z" clipRule="evenodd" /></svg>;
-const NewOrderIcon = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM2 10a8 8 0 1116 0 8 8 0 01-16 0z" clipRule="evenodd" /></svg>;
 const PedidosIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6">
     <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm0 2h12v10H4V5zm2 2h8v2H6V7zm0 4h5v2H6v-2z" />
@@ -84,14 +82,7 @@ export default function GestaoLayout({ children }) {
     return <div className="flex h-screen w-full items-center justify-center bg-gray-100">A verificar autenticação...</div>;
   }
 
-  const novoPedidoHref =
-    nav.modoOperacao === MODO_OPERACAO.PRE_PAGO_WEB
-      ? "/gestao/pedido-bar"
-      : "/gestao/novo-pedido";
-
   const navLinks = [
-    { href: "/gestao/mesa-ativa", label: "Mesas Ativas", icon: <MesaAtivaIcon />, show: nav.mesaAtiva },
-    { href: novoPedidoHref, label: "Novo Pedido", icon: <NewOrderIcon />, show: nav.novoPedido },
     { href: "/gestao/pedidos", label: "Pedidos", icon: <PedidosIcon />, show: nav.pedidos },
     { href: "/gestao/analytics", label: "Analytics", icon: <AnalyticsIcon />, show: isAdmin && nav.analytics },
     { href: "/gestao/configuracoes", label: "Configurações", icon: <ConfiguracoesIcon />, show: isAdmin },

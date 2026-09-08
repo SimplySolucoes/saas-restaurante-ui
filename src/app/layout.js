@@ -5,7 +5,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "Cardápio Digital - Simply Dev",
-  description: "Peça diretamente da sua mesa.",
+  description: "Cardápio digital e pedidos online.",
 };
 
 export default function RootLayout({ children }) {

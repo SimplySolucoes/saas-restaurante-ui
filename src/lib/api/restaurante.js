@@ -74,34 +74,3 @@ export async function updateRestaurante(token, restauranteData) {
     return { error: error.message };
   }
 }
-
-
-// --- Gestão de Mesas ---
-export async function getMesas(token) {
-  if (!token) return [];
-  try {
-    const response = await fetch(`${getApiUrl()}/mesas/`, {
-      headers: { 'Authorization': `Token ${token}` },
-    });
-    if (!response.ok) throw new Error('Falha ao buscar mesas.');
-    return await response.json();
-  } catch (error) {
-    console.error("API Error ao buscar mesas:", error);
-    return [];
-  }
-}
-
-export async function getUrlSeguraMesa(token, mesaId) {
-  if (!token) return { error: "Token em falta." };
-  try {
-    const response = await fetch(`${getApiUrl()}/mesas/${mesaId}/url-segura/`, {
-      headers: { 'Authorization': `Token ${token}` },
-    });
-    if (!response.ok) throw new Error('Falha ao buscar URL segura.');
-    return await response.json(); 
-  } catch (error) {
-    console.error("API Error (getUrlSeguraMesa):", error);
-    return { error: error.message };
-  }
-}
-

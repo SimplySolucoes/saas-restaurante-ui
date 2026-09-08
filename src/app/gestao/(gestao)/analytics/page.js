@@ -152,7 +152,7 @@ function FaturamentoTab({ token, periodo }) {
         <KpiCard label="Faturamento total" value={formatBRL(kpis.faturamento_total)} />
         <KpiCard label="Ticket médio" value={formatBRL(kpis.ticket_medio)} />
         <KpiCard
-          label={prepago ? "Pedidos pagos" : "Contas fechadas"}
+          label={prepago ? "Pedidos pagos" : "Registos"}
           value={String(kpis.transacoes ?? 0)}
         />
         <KpiCard label="Média diária" value={formatBRL(kpis.media_diaria)} />
@@ -419,7 +419,7 @@ function PedidosTab({ token, periodo, prepago }) {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-gray-600">
-          Histórico completo de {prepago ? "pedidos pagos" : "contas fechadas"} no período.
+          Histórico completo de {prepago ? "pedidos pagos" : "registos"} no período.
         </p>
         <form
           className="flex gap-2"
@@ -432,7 +432,7 @@ function PedidosTab({ token, periodo, prepago }) {
             type="search"
             value={buscaInput}
             onChange={(e) => setBuscaInput(e.target.value)}
-            placeholder={prepago ? "Código ou cliente…" : "Nº da mesa…"}
+            placeholder={prepago ? "Código ou cliente…" : "Buscar…"}
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
           <button
@@ -460,7 +460,7 @@ function PedidosTab({ token, periodo, prepago }) {
                   <thead className="border-b border-gray-100 bg-gray-50 text-left text-gray-600">
                     <tr>
                       <th className="px-4 py-3 font-semibold">
-                        {prepago ? "Código" : "Mesa"}
+                        {prepago ? "Código" : "Ref."}
                       </th>
                       <th className="px-4 py-3 font-semibold">Data</th>
                       <th className="px-4 py-3 font-semibold">Total</th>
@@ -601,7 +601,7 @@ export default function AnalyticsPage() {
             <h1 className="text-2xl font-bold text-gray-800 sm:text-3xl">Analytics</h1>
             <p className="mt-1 text-sm text-gray-600">
               Faturamento e desempenho do cardápio
-              {prepago ? " · modo bar" : " · modo mesas"}.
+              {prepago ? " · modo bar" : " · cardápio digital"}.
             </p>
           </div>
           <PeriodoSelector periodo={periodo} onChange={setPeriodo} />

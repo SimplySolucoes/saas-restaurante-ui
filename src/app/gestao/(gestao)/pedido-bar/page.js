@@ -10,7 +10,7 @@ import {
   createPedidoPrePago,
   resolveValorCobrancaPrepago,
 } from "@/lib/api";
-import { navFlagsFromRestaurante, isModoPrePago, MODO_OPERACAO } from "@/lib/gestaoNav";
+import { isModoPrePago } from "@/lib/gestaoNav";
 
 import GarcomMenu from "@/components/gestao/GarcomMenu";
 import Toast from "@/components/ui/Toast";
@@ -72,13 +72,8 @@ export default function PedidoBarPage() {
 
   useEffect(() => {
     if (!restaurante) return;
-    const nav = navFlagsFromRestaurante(restaurante);
-    if (!nav.novoPedido) {
+    if (!isModoPrePago(restaurante)) {
       router.replace("/gestao");
-      return;
-    }
-    if (restaurante.modo_operacao !== MODO_OPERACAO.PRE_PAGO_WEB) {
-      router.replace("/gestao/novo-pedido");
     }
   }, [restaurante, router]);
 
